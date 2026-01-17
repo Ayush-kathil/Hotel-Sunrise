@@ -4,7 +4,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Rooms from './pages/Rooms';
-import Booking from './pages/Booking';
+import Booking from './pages/BookingPage';
 import Contact from './pages/Contact'; // <-- ADDED THIS
 import UserDashboard from './components/UserDashboard';
 import Terms from './pages/Terms';

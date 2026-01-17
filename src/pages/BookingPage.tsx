@@ -23,11 +23,6 @@ const Booking = () => {
     };
     alert(`Opening Razorpay Checkout for ₹${TOTAL}...\n(This is a simulation)`);
   };
-  const options = {
-  key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Securely loads from .env
-  amount: TOTAL * 100,
-  // ... rest of code
-};
 
   return (
     <div className="pt-32 pb-20 px-6 bg-zinc-50 min-h-screen">
