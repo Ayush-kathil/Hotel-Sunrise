@@ -1,17 +1,17 @@
-// Removed "import React" to keep it clean
 import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { MapPin, ArrowRight, Play, Quote } from 'lucide-react';
 
-// --- FIX IS HERE: Added 'className' to the props definition ---
+// --- FIXED FADEIN COMPONENT ---
+// Now correctly applies the className so your layout works!
 const FadeIn = ({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) => (
   <motion.div
     initial={{ opacity: 0, y: 40 }}
     whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: "-100px" }}
+    viewport={{ once: true, margin: "-50px" }} // Adjusted margin for smoother trigger
     transition={{ duration: 0.8, delay, ease: "easeOut" }}
-    className={className} // Now allows custom classes!
+    className={className}
   >
     {children}
   </motion.div>
@@ -110,9 +110,10 @@ const Home = () => {
             style={{ scale: vidScale, opacity: vidOpacity }}
             className="w-full h-full relative shadow-2xl"
           >
-            {/* PASTE VIDEO LINK HERE */}
+            {/* MAKE SURE TO ADD YOUR VIDEO FILE IN src/assets/video-main.mp4 */}
             <video autoPlay muted loop playsInline className="w-full h-full object-cover">
-              <source src="src/assets/video-main.mp4" type="video/mp4" />
+              {/* Fallback to image if video missing */}
+              <source src="https://assets.mixkit.co/videos/preview/mixkit-hotel-lobby-with-luxury-furniture-4182-large.mp4" type="video/mp4" />
             </video>
 
             <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30">
@@ -155,7 +156,7 @@ const Home = () => {
             
             {/* Right Side: Director Card */}
             <div className="flex-1 w-full">
-              <FadeIn delay={0.2} className="w-full"> {/* Now className works here! */}
+              <FadeIn delay={0.2} className="w-full">
                 <div className="relative bg-zinc-50 p-12 rounded-2xl border border-zinc-100 hover:shadow-2xl transition-all duration-500">
                   <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80" className="w-28 h-28 rounded-full border-4 border-white mb-8 object-cover shadow-lg" alt="Director" />
                   <Quote className="text-yellow-500 mb-6 w-8 h-8" />
@@ -175,7 +176,7 @@ const Home = () => {
       {/* 5. MAP SECTION */}
       <section className="h-[600px] relative w-full bg-zinc-100 border-t border-zinc-200">
         <iframe 
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3559.0123456789!2d79.4500!3d25.9900!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39987979264426b3%3A0xc3f8e815668b422!2sOrai%2C%20Uttar%20Pradesh!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
+          src="https://maps.google.com/maps?q=Orai%20Uttar%20Pradesh&t=&z=13&ie=UTF8&iwloc=&output=embed"
           className="w-full h-full absolute inset-0 filter grayscale opacity-60 hover:opacity-100 transition-opacity duration-700"
           style={{ border: 0 }} 
           allowFullScreen 
@@ -193,7 +194,7 @@ const Home = () => {
             <h2 className="text-4xl font-serif text-black mb-4">Find Us</h2>
             <p className="text-zinc-500 mb-8 text-lg">Near Kalpi Stand, Orai, Uttar Pradesh</p>
             <a 
-              href="https://www.google.com/maps/search/?api=1&query=Orai+Uttar+Pradesh" 
+              href="https://maps.google.com/maps?q=Orai%20Uttar%20Pradesh" 
               target="_blank" 
               className="inline-flex items-center gap-2 bg-black text-white px-8 py-4 rounded-full text-sm font-bold hover:bg-[#d4af37] hover:text-white transition-all tracking-widest"
             >
@@ -208,11 +209,11 @@ const Home = () => {
         <h2 className="text-4xl font-serif mb-10 text-[#d4af37]">SUNRISE</h2>
         <div className="flex justify-center gap-10 text-sm text-zinc-500 mb-16 uppercase tracking-widest font-bold">
           <Link to="/rooms" className="hover:text-black transition-colors hover:underline underline-offset-8">Rooms</Link>
-          <Link to="/booking" className="hover:text-black transition-colors hover:underline underline-offset-8">Booking</Link>
           <Link to="/contact" className="hover:text-black transition-colors hover:underline underline-offset-8">Support</Link>
+          <Link to="/login" className="hover:text-black transition-colors hover:underline underline-offset-8">Login</Link>
         </div>
         <p className="text-zinc-300 text-xs font-medium">© 2026 Hotel Sunrise. Classical Luxury.</p>
-        <Link to="/terms" className="hover:text-black transition-colors">Terms</Link>
+        <Link to="/terms" className="hover:text-black transition-colors text-xs text-zinc-300 mt-2 block">Terms</Link>
       </footer>
     </div>
   );

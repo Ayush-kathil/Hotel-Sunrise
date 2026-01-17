@@ -1,189 +1,171 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-  signInWithPopup, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  updateProfile 
-} from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
-import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
-import './Login.css';
+import { supabase } from '../supabaseClient';
+import { Chrome, Mail, Lock, ArrowRight } from 'lucide-react';
 
 const Login = () => {
-  const [lightOn, setLightOn] = useState(false);
-  const [isLoginMode, setIsLoginMode] = useState(true); // Toggle for Login vs Signup
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  // Form States
-  const [name, setName] = useState('');
+  const [isOn, setIsOn] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  // 1. Handle Google Login (Works for both new and existing)
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      saveUser(result.user);
-    } catch (error: any) {
-      alert("Google Login Failed: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Redirect if already logged in
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate('/');
+    });
+  }, [navigate]);
 
-  // 2. Handle Email/Password Login & Signup
-  const handleEmailAuth = async (e: React.FormEvent) => {
+  const toggleLight = () => setIsOn(!isOn);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
+    const action = isSignUp 
+      ? supabase.auth.signUp({ 
+          email, 
+          password, 
+          options: { data: { full_name: 'New Member' } } 
+        })
+      : supabase.auth.signInWithPassword({ email, password });
 
-    try {
-      if (isLoginMode) {
-        // --- EXISTING USER LOGIC ---
-        const result = await signInWithEmailAndPassword(auth, email, password);
-        saveUser(result.user);
-      } else {
-        // --- NEW USER LOGIC ---
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        // Add their name to their profile
-        if (auth.currentUser) {
-          await updateProfile(auth.currentUser, { displayName: name });
-        }
-        saveUser({ ...result.user, displayName: name });
-      }
-    } catch (error: any) {
-      alert("Error: " + error.message);
-      setLoading(false);
+    const { error } = await action;
+
+    if (error) {
+      alert(error.message);
+    } else {
+      if (isSignUp) alert("Account created! Check your email.");
+      navigate('/');
     }
+    setLoading(false);
   };
 
-  // Helper to save data and redirect
-  const saveUser = (user: any) => {
-    localStorage.setItem('sunriseUser', user.displayName || 'Guest');
-    localStorage.setItem('sunriseEmail', user.email || '');
-    setLightOn(true); // Turn on light for effect
-    setTimeout(() => navigate('/'), 1000);
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/' }
+    });
+    if (error) alert(error.message);
   };
 
   return (
-    <div className={`h-screen w-full flex justify-center items-center transition-colors duration-700 overflow-hidden relative ${lightOn ? 'bg-zinc-900' : 'bg-black'}`}>
+    <div className={`min-h-screen transition-colors duration-700 ease-in-out flex flex-col items-center justify-center relative overflow-hidden ${isOn ? 'bg-[#e0e0e0]' : 'bg-zinc-950'}`}>
       
-      {/* LAMP ASSEMBLY */}
-      <div className="lamp-assembly">
-        <div className="cord"></div>
-        <div className="arm-top"></div>
-        <div className="joint"></div>
-        <div className="arm-bottom"></div>
-        <div className="shade"></div>
-        <div className={`bulb-glow ${lightOn ? 'on' : ''}`}></div>
-        <div className="string" onClick={() => setLightOn(!lightOn)}>
-           <div className="knob"></div>
-        </div>
+      {/* --- THE LAMP STRING (Clickable Area) --- */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center cursor-pointer group" onClick={toggleLight}>
+        {/* Invisible larger hit area for easier clicking */}
+        <div className="absolute inset-0 w-20 h-full -z-10" />
+        
+        {/* The Cord */}
+        <motion.div 
+          className="w-0.5 bg-zinc-800"
+          animate={{ height: isOn ? 100 : 130 }} 
+          transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+        />
+        {/* The Handle */}
+        <motion.div 
+          whileTap={{ y: 20 }}
+          className={`w-3 h-6 rounded-full shadow-lg border-2 transition-colors duration-300 ${isOn ? 'bg-yellow-400 border-yellow-200 shadow-[0_0_15px_rgba(255,255,0,0.8)]' : 'bg-zinc-800 border-zinc-700'}`}
+        />
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0, rotateY: 90 }}
-        animate={{ opacity: lightOn ? 1 : 0, rotateY: lightOn ? 0 : 90 }}
-        transition={{ duration: 0.8 }}
-        className="bg-zinc-950/90 backdrop-blur-xl p-8 md:p-12 rounded-3xl border border-zinc-800 w-[400px] text-center z-30 shadow-2xl"
-      >
-        <h2 className="text-white font-serif text-3xl mb-2">
-          {isLoginMode ? 'Welcome Back' : 'Join Sunrise'}
-        </h2>
-        <p className="text-zinc-500 mb-8 text-sm">
-          {isLoginMode ? 'Enter your details to sign in.' : 'Start your luxury journey today.'}
-        </p>
-        
-        <form onSubmit={handleEmailAuth} className="flex flex-col gap-4 text-left">
-          
-          {/* Show Name field ONLY for New Users */}
-          <AnimatePresence>
-            {!isLoginMode && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }} 
-                animate={{ height: 'auto', opacity: 1 }} 
-                exit={{ height: 0, opacity: 0 }}
-                className="relative overflow-hidden"
-              >
-                <User className="absolute left-3 top-3 text-zinc-500" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Full Name" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-10 text-white outline-none focus:border-[#d4af37] transition-colors"
-                  required={!isLoginMode}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="relative">
-            <Mail className="absolute left-3 top-3 text-zinc-500" size={18} />
-            <input 
-              type="email" 
-              placeholder="Email Address" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-10 text-white outline-none focus:border-[#d4af37] transition-colors"
-              required 
-            />
-          </div>
-
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 text-zinc-500" size={18} />
-            <input 
-              type="password" 
-              placeholder="Password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-10 text-white outline-none focus:border-[#d4af37] transition-colors"
-              required 
-            />
-          </div>
-
-          <button 
-            disabled={loading}
-            className="w-full bg-white text-black py-3 rounded-xl font-bold hover:bg-[#d4af37] hover:text-white transition-all flex justify-center items-center gap-2 mt-2"
+      {/* --- INSTRUCTION TEXT --- */}
+      <AnimatePresence>
+        {!isOn && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-40 text-zinc-500 text-xs tracking-widest uppercase font-bold pointer-events-none"
           >
-            {loading ? <Loader2 className="animate-spin" /> : (
-              <>
-                {isLoginMode ? 'SIGN IN' : 'CREATE ACCOUNT'} <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </form>
+            Pull the string to login
+          </motion.p>
+        )}
+      </AnimatePresence>
 
-        <div className="flex items-center gap-4 my-6">
-          <div className="h-[1px] bg-zinc-800 flex-1"></div>
-          <span className="text-zinc-600 text-xs uppercase">Or continue with</span>
-          <div className="h-[1px] bg-zinc-800 flex-1"></div>
-        </div>
+      {/* --- LIGHTING EFFECT (The Cone) --- */}
+      <div 
+        className={`absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[1000px] pointer-events-none transition-opacity duration-700 ${isOn ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+          background: 'radial-gradient(circle at 50% 10%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 60%)'
+        }}
+      />
 
-        <button 
-          onClick={handleGoogleLogin}
-          type="button"
-          className="w-full bg-zinc-900 border border-zinc-800 text-white py-3 rounded-xl font-medium hover:bg-zinc-800 transition-all flex justify-center items-center gap-3"
+      {/* --- LOGIN FORM (Border removed, blends into light) --- */}
+      {isOn && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="w-full max-w-md p-8 z-10 relative"
         >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
-          Google
-        </button>
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-serif font-bold text-black mb-2">Welcome Back</h2>
+            <p className="text-zinc-500 text-sm">Please sign in to continue</p>
+          </div>
 
-        {/* TOGGLE LINK FOR NEW/EXISTING USER */}
-        <p className="mt-8 text-zinc-500 text-sm">
-          {isLoginMode ? "Don't have an account? " : "Already have an account? "}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="bg-white/50 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3 focus-within:bg-white transition-colors shadow-sm">
+              <Mail size={18} className="text-zinc-400" />
+              <input 
+                type="email" 
+                placeholder="Email address"
+                className="bg-transparent w-full outline-none text-black placeholder:text-zinc-400"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            
+            <div className="bg-white/50 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3 focus-within:bg-white transition-colors shadow-sm">
+              <Lock size={18} className="text-zinc-400" />
+              <input 
+                type="password" 
+                placeholder="Password"
+                className="bg-transparent w-full outline-none text-black placeholder:text-zinc-400"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <button 
+              disabled={loading}
+              className="w-full bg-black text-white py-4 rounded-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
+            >
+              {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
+              <ArrowRight size={16} />
+            </button>
+          </form>
+
+          <div className="my-6 flex items-center gap-3 opacity-50">
+            <div className="h-[1px] bg-black/10 flex-1"></div>
+            <span className="text-[10px] uppercase text-black/40 tracking-widest">Or</span>
+            <div className="h-[1px] bg-black/10 flex-1"></div>
+          </div>
+
           <button 
-            onClick={() => setIsLoginMode(!isLoginMode)}
-            className="text-[#d4af37] font-bold hover:underline ml-1"
+            onClick={handleGoogleLogin}
+            className="w-full bg-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-50 transition-colors shadow-sm"
           >
-            {isLoginMode ? 'Sign Up' : 'Login'}
+            <Chrome size={18} className="text-blue-500" /> 
+            <span className="font-medium text-zinc-700">Continue with Google</span>
           </button>
-        </p>
 
-      </motion.div>
+          <div className="mt-6 text-center">
+            <button 
+              type="button" 
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-xs text-zinc-500 hover:text-black underline"
+            >
+              {isSignUp ? 'Already a member? Login' : 'New here? Create an account'}
+            </button>
+          </div>
+
+        </motion.div>
+      )}
     </div>
   );
 };
