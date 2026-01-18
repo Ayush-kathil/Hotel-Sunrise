@@ -40,15 +40,20 @@ const BookingPage = () => {
     checkUser();
   }, []);
 
+  // AUTOMATICALLY CALCULATE NIGHTS & PRICE
   useEffect(() => {
     if (checkIn && checkOut) {
       const start = new Date(checkIn);
       const end = new Date(checkOut);
       const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      
       if (diffDays > 0) {
         setNights(diffDays);
         setTotalPrice(diffDays * (room?.price || 0));
+      } else {
+        setNights(1);
+        setTotalPrice(room?.price || 0);
       }
     }
   }, [checkIn, checkOut, room]);
@@ -59,6 +64,7 @@ const BookingPage = () => {
 
     if (!user || !room) return;
 
+    // VALIDATION
     if (new Date(checkIn) < new Date(today)) {
         toast.error("Invalid Check-in Date");
         setLoading(false); return;
@@ -68,8 +74,7 @@ const BookingPage = () => {
         setLoading(false); return;
     }
 
-    // 1. DATABASE INSERT
-    console.log("Saving to Supabase...");
+    // 1. SAVE TO DATABASE
     const { error } = await supabase
       .from('bookings')
       .insert([{
@@ -78,7 +83,7 @@ const BookingPage = () => {
         total_price: totalPrice,
         check_in: checkIn,
         check_out: checkOut,
-        nights: nights,
+        nights: nights, // This is now calculated correctly
         guests: guests,
         status: 'confirmed',
         user_id: user.id
@@ -87,11 +92,9 @@ const BookingPage = () => {
     if (error) {
       console.error("DB Error:", error);
       toast.error("Booking Failed", { description: error.message });
-      setLoading(false);
     } else {
-      console.log("DB Success. Attempting Email...");
       
-      // 2. EMAILJS SEND
+      // 2. SEND EMAIL
       const templateParams = {
            to_name: "Admin",
            guest_name: user.user_metadata?.full_name || user.email,
@@ -100,26 +103,18 @@ const BookingPage = () => {
            check_in: checkIn,
            check_out: checkOut,
            price: `₹${totalPrice.toLocaleString()}`,
-           dashboard_link: window.location.origin + "/dashboard",
            reply_to: user.email
       };
 
-      // DEBUG: Log the exact data we are sending
-      console.log("Sending Email Params:", templateParams);
-
       try {
-        // MAKE SURE THESE KEYS ARE CORRECT (No spaces!)
+        // REPLACE WITH YOUR ACTUAL KEYS (No Spaces!)
         await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams, 'YOUR_PUBLIC_KEY');
-        console.log("✅ Email Sent Successfully!");
-        toast.success("Booking Confirmed & Email Sent!");
-      } catch (err: any) { 
+        console.log("✅ Email Sent");
+      } catch (err) { 
         console.error("❌ Email Failed:", err);
-        // We log the specific error text to see why it failed
-        console.error("EmailJS Error Text:", err.text); 
-        toast.warning("Booking Saved, but Email Failed. Check Console.");
       }
 
-      // 3. REDIRECT
+      toast.success("Booking Confirmed!");
       navigate('/profile'); 
     }
     setLoading(false);
@@ -131,13 +126,13 @@ const BookingPage = () => {
     <div className="min-h-screen bg-[#fcfbf9] pt-28 px-6 pb-20">
       <div className="container mx-auto max-w-4xl">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-zinc-500 mb-8 hover:text-black">
-          <ArrowLeft size={20} /> Back
+          <ArrowLeft size={20} /> Back to Rooms
         </button>
         
         <div className="grid md:grid-cols-2 gap-8 items-start">
            
-           {/* ROOM INFO */}
-           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white p-6 rounded-[2rem] shadow-xl border border-zinc-100">
+           {/* INFO CARD */}
+           <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="bg-white p-6 rounded-[2rem] shadow-xl border border-zinc-100">
               <img src={room.img} alt={room.name} className="w-full h-64 object-cover rounded-[1.5rem] mb-6 shadow-md" />
               <h1 className="text-3xl font-serif font-bold mb-2">{room.name}</h1>
               <div className="flex justify-between py-4 border-b border-zinc-100">
@@ -150,8 +145,8 @@ const BookingPage = () => {
               </div>
            </motion.div>
 
-           {/* BOOKING FORM */}
-           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="bg-white p-8 rounded-[2rem] shadow-xl border border-zinc-100">
+           {/* FORM CARD */}
+           <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="bg-white p-8 rounded-[2rem] shadow-xl border border-zinc-100">
               <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                  <CreditCard className="text-[#d4af37]" /> Confirm Stay
               </h3>
@@ -180,13 +175,6 @@ const BookingPage = () => {
                         <input type="date" required min={checkIn || today} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} className="w-full border pl-12 p-4 rounded-xl" />
                     </div>
                   </div>
-                </div>
-
-                <div>
-                   <label className="text-xs font-bold uppercase text-zinc-400 ml-2">Guests</label>
-                   <select value={guests} onChange={(e) => setGuests(Number(e.target.value))} className="w-full border p-4 rounded-xl bg-white">
-                      {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} Guests</option>)}
-                   </select>
                 </div>
 
                 <button disabled={loading} className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-[#d4af37] transition-all disabled:opacity-50">
