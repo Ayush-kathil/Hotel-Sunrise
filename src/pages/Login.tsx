@@ -1,221 +1,187 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { Chrome, Mail, Lock, ArrowRight, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, ArrowRight, UserPlus, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [isOn, setIsOn] = useState(false);
-  const [loading, setLoading] = useState(false);
-  
-  // Form State
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // NEW
+  const location = useLocation();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showErrorCard, setShowErrorCard] = useState(false); // Controls the Premium Error Card
+  
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    fullName: ''
+  });
 
-  // Redirect if already logged in
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/');
-    });
-  }, [navigate]);
+  // Where to go after login? (Default to Profile, or Admin if admin)
+  const returnTo = location.state?.returnTo || '/profile';
+  const savedRoom = location.state?.room;
 
-  const toggleLight = () => setIsOn(!isOn);
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+    setShowErrorCard(false); // Reset error state
+
     try {
       if (isSignUp) {
-        // --- SIGN UP VALIDATION ---
-        if (password !== confirmPassword) {
-            toast.error("Passwords do not match", { description: "Please check and try again." });
-            setLoading(false);
-            return;
-        }
-        if (password.length < 6) {
-            toast.error("Password too weak", { description: "Must be at least 6 characters." });
-            setLoading(false);
-            return;
-        }
-
         // --- SIGN UP LOGIC ---
-        const { error } = await supabase.auth.signUp({ 
-          email, 
-          password, 
-          options: { 
-            data: { full_name: 'New Member' },
-            emailRedirectTo: window.location.origin // Ensure they come back here after clicking email
-          } 
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: { full_name: formData.fullName }
+          }
         });
         if (error) throw error;
-        
-        // Success Toast
-        toast.success("Verification Email Sent!", {
-          description: "Please check your inbox to verify your account before logging in.",
-          duration: 6000, // Show longer so they read it
-          icon: <CheckCircle className="text-green-500" />
-        });
-        
-        // Switch back to login view so they can login after verifying
-        setIsSignUp(false); 
-
+        toast.success("Account Created!", { description: "Please check your email to verify." });
       } else {
-        // --- SIGN IN LOGIC ---
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        // --- LOGIN LOGIC ---
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
         if (error) {
-             // Specific error for unverified emails
-             if (error.message.includes("Email not confirmed")) {
-                 throw new Error("Please verify your email address first.");
-             }
-             throw error;
+           // If error is "Invalid login credentials", show the Premium Card
+           setShowErrorCard(true);
+           setLoading(false);
+           return;
         }
 
-        toast.success("Welcome back!", {
-          description: "You have successfully logged in."
-        });
-        navigate('/');
+        // CHECK IF ADMIN OR USER
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.session.user.id)
+          .single();
+
+        toast.success("Welcome Back");
+        
+        // Intelligent Redirect
+        if (profile?.role === 'admin') {
+           navigate('/dashboard');
+        } else if (savedRoom) {
+           // If they were trying to book a room, send them back to booking
+           navigate('/booking', { state: { room: savedRoom } });
+        } else {
+           navigate('/profile');
+        }
       }
     } catch (error: any) {
-      toast.error("Access Denied", {
-        description: error.message
-      });
+      toast.error("Authentication Failed", { description: error.message });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/' }
-    });
-    if (error) {
-      toast.error("Google Login Failed", { description: error.message });
-    }
-  };
-
   return (
-    <div className={`min-h-screen transition-colors duration-700 ease-in-out flex flex-col items-center justify-center relative overflow-hidden ${isOn ? 'bg-[#e0e0e0]' : 'bg-zinc-950'}`}>
+    <div className="min-h-screen flex items-center justify-center bg-[#fcfbf9] relative overflow-hidden px-6">
       
-      {/* --- THE LAMP STRING --- */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center cursor-pointer group" onClick={toggleLight}>
-        <div className="absolute inset-0 w-20 h-full -z-10" />
-        <motion.div 
-          className="w-0.5 bg-zinc-800"
-          animate={{ height: isOn ? 100 : 130 }} 
-          transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-        />
-        <motion.div 
-          whileTap={{ y: 20 }}
-          className={`w-3 h-6 rounded-full shadow-lg border-2 transition-colors duration-300 ${isOn ? 'bg-yellow-400 border-yellow-200 shadow-[0_0_15px_rgba(255,255,0,0.8)]' : 'bg-zinc-800 border-zinc-700'}`}
-        />
+      {/* Background Decoration */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#d4af37]/10 rounded-full blur-[100px]" />
+         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-zinc-900/5 rounded-full blur-[100px]" />
       </div>
 
-      <AnimatePresence>
-        {!isOn && (
-          <motion.p
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute top-40 text-zinc-500 text-xs tracking-widest uppercase font-bold pointer-events-none"
-          >
-            Pull the string to login
-          </motion.p>
-        )}
-      </AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+        className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-white/50 relative z-10"
+      >
+        {/* Toggle Header */}
+        <div className="flex justify-center mb-10 bg-zinc-100 p-1 rounded-full w-fit mx-auto">
+           <button 
+             onClick={() => { setIsSignUp(false); setShowErrorCard(false); }}
+             className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all ${!isSignUp ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'}`}
+           >
+             Sign In
+           </button>
+           <button 
+             onClick={() => { setIsSignUp(true); setShowErrorCard(false); }}
+             className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all ${isSignUp ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'}`}
+           >
+             Register
+           </button>
+        </div>
 
-      <div 
-        className={`absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[1000px] pointer-events-none transition-opacity duration-700 ${isOn ? 'opacity-100' : 'opacity-0'}`}
-        style={{ background: 'radial-gradient(circle at 50% 10%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 60%)' }}
-      />
+        <div className="text-center mb-10">
+           <h1 className="text-3xl font-serif font-bold mb-2">{isSignUp ? 'Join the Club' : 'Welcome Back'}</h1>
+           <p className="text-zinc-400 text-sm">Enter your details to access your account.</p>
+        </div>
 
-      {isOn && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="w-full max-w-md p-8 z-10 relative"
-        >
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-serif font-bold text-black mb-2">{isSignUp ? "Create Account" : "Welcome Back"}</h2>
-            <p className="text-zinc-500 text-sm">{isSignUp ? "Join us for exclusive stays" : "Please sign in to continue"}</p>
-          </div>
+        <form onSubmit={handleAuth} className="space-y-4">
+           {isSignUp && (
+             <div className="relative">
+                <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
+                <input 
+                  type="text" placeholder="Full Name" required 
+                  className="w-full bg-zinc-50 border border-zinc-100 p-4 pl-12 rounded-xl outline-none focus:border-[#d4af37] transition-colors"
+                  value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})}
+                />
+             </div>
+           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="bg-white/50 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3 focus-within:bg-white transition-colors shadow-sm">
-              <Mail size={18} className="text-zinc-400 shrink-0" />
+           <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
               <input 
-                type="email" required placeholder="Email address"
-                className="bg-transparent w-full outline-none text-black placeholder:text-zinc-400"
-                value={email} onChange={(e) => setEmail(e.target.value)}
+                type="email" placeholder="Email Address" required 
+                className="w-full bg-zinc-50 border border-zinc-100 p-4 pl-12 rounded-xl outline-none focus:border-[#d4af37] transition-colors"
+                value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
               />
-            </div>
-            
-            <div className="bg-white/50 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3 focus-within:bg-white transition-colors shadow-sm">
-              <Lock size={18} className="text-zinc-400 shrink-0" />
+           </div>
+
+           <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
               <input 
-                type="password" required placeholder="Password"
-                className="bg-transparent w-full outline-none text-black placeholder:text-zinc-400"
-                value={password} onChange={(e) => setPassword(e.target.value)}
+                type="password" placeholder="Password" required 
+                className="w-full bg-zinc-50 border border-zinc-100 p-4 pl-12 rounded-xl outline-none focus:border-[#d4af37] transition-colors"
+                value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}
               />
-            </div>
+           </div>
 
-            {/* --- CONFIRM PASSWORD (Only visible during Sign Up) --- */}
-            <AnimatePresence>
-                {isSignUp && (
-                    <motion.div 
-                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                    >
-                        <div className="bg-white/50 backdrop-blur-sm rounded-xl px-4 py-3 flex items-center gap-3 focus-within:bg-white transition-colors shadow-sm mb-1">
-                            <Lock size={18} className="text-zinc-400 shrink-0" />
-                            <input 
-                                type="password" required={isSignUp} placeholder="Confirm Password"
-                                className="bg-transparent w-full outline-none text-black placeholder:text-zinc-400"
-                                value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+           <button disabled={loading} className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-[#d4af37] transition-all disabled:opacity-50 flex justify-center items-center gap-2 mt-4 shadow-xl">
+              {loading ? "Processing..." : (isSignUp ? "Create Account" : "Access Account")} <ArrowRight size={16} />
+           </button>
+        </form>
 
-            <button 
-              disabled={loading}
-              className="w-full bg-black text-white py-4 rounded-xl font-bold hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
+        {/* --- PREMIUM "ACCOUNT NOT FOUND" CARD --- */}
+        <AnimatePresence>
+          {showErrorCard && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+              className="absolute inset-0 bg-white/95 backdrop-blur-xl z-20 flex flex-col items-center justify-center p-8 text-center rounded-[2.5rem]"
             >
-              {loading ? 'Processing...' : (isSignUp ? 'Verify & Join' : 'Sign In')}
-              <ArrowRight size={16} />
-            </button>
-          </form>
+               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                  <XCircle size={32} />
+               </div>
+               <h3 className="text-2xl font-serif font-bold text-zinc-900 mb-2">Account Not Found</h3>
+               <p className="text-zinc-500 text-sm mb-8 leading-relaxed">
+                 We couldn't find an account with these credentials. You might need to sign up first.
+               </p>
+               
+               <div className="flex flex-col gap-3 w-full">
+                 <button 
+                   onClick={() => { setShowErrorCard(false); setIsSignUp(true); }}
+                   className="w-full py-4 bg-[#d4af37] text-black font-bold rounded-xl hover:bg-black hover:text-white transition-all shadow-lg"
+                 >
+                   Create New Account
+                 </button>
+                 <button 
+                   onClick={() => setShowErrorCard(false)}
+                   className="w-full py-4 bg-zinc-100 text-zinc-500 font-bold rounded-xl hover:bg-zinc-200 transition-all"
+                 >
+                   Try Again
+                 </button>
+               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          <div className="my-6 flex items-center gap-3 opacity-50">
-            <div className="h-[1px] bg-black/10 flex-1"></div>
-            <span className="text-[10px] uppercase text-black/40 tracking-widest">Or</span>
-            <div className="h-[1px] bg-black/10 flex-1"></div>
-          </div>
-
-          <button 
-            type="button" onClick={handleGoogleLogin}
-            className="w-full bg-white py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-50 transition-colors shadow-sm"
-          >
-            <Chrome size={18} className="text-blue-500" /> 
-            <span className="font-medium text-zinc-700">Continue with Google</span>
-          </button>
-
-          <div className="mt-6 text-center">
-            <button 
-              type="button" 
-              onClick={() => { setIsSignUp(!isSignUp); setConfirmPassword(''); }}
-              className="text-xs text-zinc-500 hover:text-black underline"
-            >
-              {isSignUp ? 'Already a member? Login' : 'New here? Create an account'}
-            </button>
-          </div>
-
-        </motion.div>
-      )}
+      </motion.div>
     </div>
   );
 };

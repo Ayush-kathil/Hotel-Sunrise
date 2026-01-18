@@ -91,7 +91,8 @@ const BookingPage = () => {
       console.error("DB Error:", error);
       toast.error("Booking Failed", { description: error.message });
     } else {
-      // 4. EMAIL NOTIFICATION
+      
+      // 4. EMAIL NOTIFICATION (Only runs if DB success)
       try {
         const templateParams = {
            to_name: "Admin",
@@ -102,12 +103,20 @@ const BookingPage = () => {
            price: `₹${totalPrice.toLocaleString()}`,
            reply_to: user.email
         };
-        // USE YOUR KEYS HERE
+        
+        // REPLACE THESE WITH YOUR ACTUAL KEYS FROM EMAILJS DASHBOARD
         await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams, 'YOUR_PUBLIC_KEY');
-      } catch (err) { console.error("Email failed", err); }
+        console.log("✅ Email sent successfully!");
+
+      } catch (err) { 
+        console.error("❌ Email Failed:", err);
+        // We don't stop the flow here because the booking was successful
+      }
 
       toast.success("Booking Confirmed!", { icon: <CheckCircle className="text-green-500" /> });
-      navigate('/dashboard'); 
+      
+      // REDIRECT: Send normal users to their profile
+      navigate('/profile'); 
     }
     setLoading(false);
   };
@@ -124,7 +133,7 @@ const BookingPage = () => {
         <div className="grid md:grid-cols-2 gap-8 items-start">
            
            {/* ROOM INFO */}
-           <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-zinc-100">
+           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white p-6 rounded-[2rem] shadow-xl border border-zinc-100">
               <img src={room.img} alt={room.name} className="w-full h-64 object-cover rounded-[1.5rem] mb-6 shadow-md" />
               <h1 className="text-3xl font-serif font-bold mb-2">{room.name}</h1>
               <div className="flex justify-between py-4 border-b border-zinc-100">
@@ -135,10 +144,10 @@ const BookingPage = () => {
                 <span className="text-zinc-500">Total ({nights} nights)</span>
                 <span className="text-2xl font-bold text-[#d4af37]">₹{totalPrice.toLocaleString()}</span>
               </div>
-           </div>
+           </motion.div>
 
            {/* BOOKING FORM */}
-           <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-zinc-100">
+           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="bg-white p-8 rounded-[2rem] shadow-xl border border-zinc-100">
               <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                  <CreditCard className="text-[#d4af37]" /> Confirm Stay
               </h3>
@@ -180,7 +189,7 @@ const BookingPage = () => {
                   {loading ? "Processing..." : `Pay ₹${totalPrice.toLocaleString()}`}
                 </button>
               </form>
-           </div>
+           </motion.div>
         </div>
       </div>
     </div>
