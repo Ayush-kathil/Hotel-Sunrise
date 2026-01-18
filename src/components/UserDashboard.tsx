@@ -1,226 +1,208 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, LogOut, Save, Camera, Mail, Phone, User, Lock } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { motion } from 'framer-motion';
+import { User, Phone, Mail, LogOut, Save, ShieldCheck, MapPin } from 'lucide-react';
 
-const UserDashboard = () => {
+const Dashboard = () => {
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState<any>(null);
   
-  // State for user details
-  const [formData, setFormData] = useState({
-    id: '',
-    full_name: '',
-    email: '',
-    phone: '',
-    membership: 'Gold Tier' // Default
-  });
+  // Form State
+  const [fullName, setFullName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [email, setEmail] = useState('');
 
+  // 1. Fetch User Data
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    const fetchProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        navigate('/login');
+        return;
+      }
 
-  const fetchUserData = async () => {
-    setLoading(true);
-    
-    // 1. Get the currently logged-in user from Supabase Auth
-    const { data: { user } } = await supabase.auth.getUser();
+      const { user } = session;
+      setUser(user);
+      setEmail(user.email || '');
 
-    if (!user) {
-      // If no one is logged in, send them to login page
-      navigate('/login');
-      return;
-    }
+      // Get profile data from database
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-    // 2. Fetch their extra details (Phone, Name) from the 'profiles' table
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+      if (profile) {
+        setFullName(profile.full_name || user.user_metadata.full_name || '');
+        setMobile(profile.mobile || '');
+      } else {
+        // Fallback if no profile row exists yet
+        setFullName(user.user_metadata.full_name || '');
+      }
+      setLoading(false);
+    };
 
-    if (data) {
-      setFormData({
-        id: user.id,
-        email: user.email || '', // Auto-filled from Login
-        full_name: data.full_name || 'Valued Guest',
-        phone: data.phone || '',
-        membership: data.membership || 'Gold Tier'
-      });
-    } else {
-      // If profile is missing, just show basic email info
-      setFormData({
-        id: user.id,
-        email: user.email || '',
-        full_name: '',
-        phone: '',
-        membership: 'Gold Tier'
-      });
-    }
-    setLoading(false);
-  };
+    fetchProfile();
+  }, [navigate]);
 
+  // 2. Save Changes & Redirect
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Save updates to the 'profiles' table
+    setSaving(true);
+
+    if (!user) return;
+
+    // Use "upsert" to update if exists, or create if missing
     const { error } = await supabase
       .from('profiles')
       .upsert({
-        id: formData.id,
-        full_name: formData.full_name,
-        phone: formData.phone,
-        membership: formData.membership,
-        email: formData.email, // Ensure email is synced
-        updated_at: new Date()
+        id: user.id,
+        full_name: fullName,
+        mobile: mobile,
+        email: email, 
+        updated_at: new Date().toISOString(),
       });
 
     if (error) {
-      alert('Error saving profile');
-      console.error(error);
+      alert("Error saving profile: " + error.message);
+      setSaving(false); // Stop loading only if there is an error
     } else {
-      alert('Profile updated successfully!');
-      closeDashboard();
+      // SUCCESS: Redirect to Home Page immediately
+      navigate('/'); 
     }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
-    window.location.reload();
   };
 
-  const closeDashboard = () => {
-    setIsOpen(false);
-    setTimeout(() => navigate('/'), 400);
-  };
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#fcfbf9]">Loading...</div>;
+  }
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex justify-end font-sans">
-          
-          {/* Dark Backdrop */}
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }}
-            onClick={closeDashboard}
-            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-          />
-
-          {/* Sliding Glass Panel */}
-          <motion.div 
-            initial={{ x: "100%" }} 
-            animate={{ x: 0 }} 
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="relative w-full max-w-md h-full bg-white/90 backdrop-blur-2xl shadow-2xl border-l border-white/50 p-8 flex flex-col"
+    <div className="min-h-screen bg-[#fcfbf9] pt-24 pb-12 font-sans px-6">
+      <div className="max-w-4xl mx-auto">
+        
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-12 flex justify-between items-end"
+        >
+          <div>
+            <h1 className="text-4xl font-serif text-black mb-2">My Account</h1>
+            <p className="text-zinc-500">Manage your personal details.</p>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-red-500 text-xs font-bold uppercase tracking-widest hover:bg-red-50 px-4 py-2 rounded-full transition-colors"
           >
-            
-            {/* Header */}
-            <div className="flex justify-between items-center mb-10">
-              <h2 className="text-xl font-serif text-black">Member Profile</h2>
-              <button 
-                onClick={closeDashboard} 
-                className="p-2 rounded-full hover:bg-zinc-100 transition-colors"
-              >
-                <X size={20} className="text-zinc-500" />
-              </button>
+            <LogOut size={16} /> Sign Out
+          </button>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          
+          {/* Sidebar Card */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
+            className="bg-white p-8 rounded-[2rem] shadow-xl shadow-zinc-200/50 border border-zinc-100 h-fit"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-400 mb-6 text-2xl font-serif font-bold">
+                 {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <h2 className="text-xl font-bold mb-1">{fullName || 'Guest User'}</h2>
+              <span className="px-3 py-1 bg-[#d4af37]/10 text-[#d4af37] text-[10px] font-bold uppercase tracking-widest rounded-full">
+                Gold Member
+              </span>
             </div>
-
-            {loading ? (
-              <div className="flex-1 flex items-center justify-center text-zinc-400">Loading Profile...</div>
-            ) : (
-              <>
-                {/* Profile Picture Area */}
-                <div className="text-center mb-10 relative">
-                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-zinc-100 to-zinc-200 rounded-full flex items-center justify-center shadow-inner mb-4 relative group cursor-pointer">
-                     <span className="text-3xl font-serif text-zinc-400">
-                        {formData.full_name ? formData.full_name.charAt(0).toUpperCase() : 'U'}
-                     </span>
-                     <div className="absolute inset-0 bg-black/10 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <Camera size={16} className="text-white" />
-                     </div>
-                  </div>
-                  <h3 className="text-2xl font-serif text-black mb-1">
-                    {formData.full_name || 'Guest'}
-                  </h3>
-                  <span className="px-3 py-1 bg-[#d4af37]/10 text-[#d4af37] text-[10px] font-bold uppercase tracking-widest rounded-full">
-                    {formData.membership}
-                  </span>
-                </div>
-
-                {/* Edit Form */}
-                <form onSubmit={handleSave} className="space-y-6 flex-1 overflow-y-auto pr-2">
-                  
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider flex items-center gap-2">
-                      <User size={12} /> Full Name
-                    </label>
-                    <input 
-                      value={formData.full_name}
-                      onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                      className="w-full bg-zinc-50 border-b-2 border-zinc-200 px-0 py-3 text-black font-medium focus:border-black focus:bg-transparent outline-none transition-all"
-                      placeholder="Enter your name"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider flex items-center gap-2">
-                      <Mail size={12} /> Email Address
-                    </label>
-                    <div className="relative">
-                      <input 
-                        value={formData.email}
-                        disabled // Disabled because email comes from Login
-                        className="w-full bg-zinc-100 border-b-2 border-transparent px-0 py-3 text-zinc-500 font-medium cursor-not-allowed"
-                      />
-                      <Lock size={12} className="absolute right-2 top-4 text-zinc-400" />
-                    </div>
-                    <p className="text-[10px] text-zinc-400 mt-1">Email is linked to your login and cannot be changed here.</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider flex items-center gap-2">
-                      <Phone size={12} /> Phone Number
-                    </label>
-                    <input 
-                      placeholder="+91..."
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full bg-zinc-50 border-b-2 border-zinc-200 px-0 py-3 text-black font-medium focus:border-black focus:bg-transparent outline-none transition-all"
-                    />
-                  </div>
-
-                  <div className="pt-6">
-                    <button className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-[#d4af37] hover:text-white transition-all shadow-lg flex items-center justify-center gap-2">
-                      <Save size={16} /> SAVE CHANGES
-                    </button>
-                  </div>
-
-                </form>
-
-                {/* Footer / Logout */}
-                <div className="pt-6 border-t border-zinc-100">
-                  <button 
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full py-3 text-red-500 text-sm font-bold hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-2"
-                  >
-                    <LogOut size={16} /> Sign Out
-                  </button>
-                </div>
-              </>
-            )}
-
           </motion.div>
+
+          {/* Main Form */}
+          <motion.div 
+             initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+             className="lg:col-span-2"
+          >
+            <form onSubmit={handleSave} className="bg-white p-10 rounded-[2rem] shadow-xl shadow-zinc-200/50 border border-zinc-100 space-y-8">
+              
+              <h3 className="text-xl font-serif font-bold border-b border-zinc-100 pb-4 mb-6">Personal Details</h3>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider pl-2 flex items-center gap-2">
+                     <User size={14} /> Full Name
+                   </label>
+                   <input 
+                     type="text" 
+                     value={fullName}
+                     onChange={(e) => setFullName(e.target.value)}
+                     className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition-all" 
+                   />
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider pl-2 flex items-center gap-2">
+                     <Mail size={14} /> Email Address
+                   </label>
+                   <input 
+                     type="email" 
+                     value={email}
+                     disabled
+                     className="w-full bg-zinc-100 border border-zinc-200 p-4 rounded-xl outline-none text-zinc-500 cursor-not-allowed" 
+                   />
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider pl-2 flex items-center gap-2">
+                     <Phone size={14} /> Mobile Number
+                   </label>
+                   <input 
+                     type="tel" 
+                     value={mobile}
+                     onChange={(e) => setMobile(e.target.value)}
+                     placeholder="+91 000 000 0000"
+                     className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition-all" 
+                   />
+                </div>
+
+                <div className="space-y-2">
+                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider pl-2 flex items-center gap-2">
+                     <MapPin size={14} /> Location
+                   </label>
+                   <input 
+                     type="text" 
+                     disabled
+                     placeholder="India"
+                     className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none" 
+                   />
+                </div>
+              </div>
+
+              <div className="pt-6 flex items-center justify-between">
+                 <div className="flex items-center gap-2 text-zinc-400 text-xs">
+                    <ShieldCheck size={14} /> Data is encrypted
+                 </div>
+                 <button 
+                   disabled={saving}
+                   className="px-8 py-4 bg-black text-white font-bold rounded-xl hover:bg-[#d4af37] transition-all flex items-center gap-3 disabled:opacity-70"
+                 >
+                   {saving ? 'Saving...' : 'Save & Continue'} <Save size={18} />
+                 </button>
+              </div>
+
+            </form>
+          </motion.div>
+
         </div>
-      )}
-    </AnimatePresence>
+      </div>
+    </div>
   );
 };
 
-export default UserDashboard;
+export default Dashboard;
