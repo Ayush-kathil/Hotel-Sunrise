@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { X, Check, ArrowRight, ArrowDown } from 'lucide-react';
+import { supabase } from '../supabaseClient'; // Make sure this path matches your project
 
 // --- DATA FOR STICKY SCROLL SECTION ---
 const venues = [
@@ -29,15 +30,22 @@ const Events = () => {
   const [activeCard, setActiveCard] = useState(0);
   const scrollRef = useRef(null);
 
+  // --- SUPABASE FORM STATE ---
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    event_type: 'Wedding', // Default
+    date: '',
+    guests: 100,
+    message: ''
+  });
+
   // --- SCROLL LISTENER FOR STICKY CHANGE ---
-  // This detects which text block is currently visible and updates the image
   const { scrollYProgress } = useScroll({ target: scrollRef });
+  useTransform(scrollYProgress, [0, 1], [0, 1]); 
   
-  // Logic to switch images based on scroll percentage
-  useTransform(scrollYProgress, [0, 1], [0, 1]); // Just to activate hook
-  
-  // Simple listener to update state (for image switching)
-  React.useEffect(() => {
+  useEffect(() => {
     const handleScroll = () => {
        const sections = document.querySelectorAll('.venue-text-section');
        sections.forEach((sec, index) => {
@@ -51,10 +59,36 @@ const Events = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // --- SUPABASE SUBMIT HANDLER ---
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const { error } = await supabase
+      .from('event_inquiries')
+      .insert([{
+        name: formData.name,
+        email: formData.email,
+        event_type: formData.event_type,
+        date: formData.date,
+        guests: formData.guests,
+        message: formData.message
+      }]);
+
+    if (error) {
+      alert("Error submitting inquiry: " + error.message);
+    } else {
+      alert("Success! We have received your inquiry.");
+      setShowModal(false);
+      setFormData({ name: '', email: '', event_type: 'Wedding', date: '', guests: 100, message: '' });
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="bg-white min-h-screen font-sans selection:bg-[#d4af37] selection:text-white">
       
-      {/* 1. CINEMATIC HERO (Fades out on scroll) */}
+      {/* 1. CINEMATIC HERO */}
       <section className="h-screen sticky top-0 z-0 flex flex-col justify-center items-center overflow-hidden bg-black text-white">
         <div className="absolute inset-0 opacity-40">
            <img 
@@ -84,8 +118,7 @@ const Events = () => {
         </div>
       </section>
 
-      {/* 2. THE "APPLE STYLE" STICKY SCROLL SECTION */}
-      {/* We add margin-top to cover the sticky hero */}
+      {/* 2. STICKY SCROLL SECTION */}
       <div ref={scrollRef} className="relative z-10 bg-white rounded-t-[3rem] mt-[-10vh] pt-32 pb-32">
         <div className="container mx-auto px-6 flex flex-col md:flex-row gap-20">
           
@@ -127,7 +160,7 @@ const Events = () => {
             ))}
           </div>
 
-          {/* RIGHT: STICKY IMAGE (Morphs) */}
+          {/* RIGHT: STICKY IMAGE */}
           <div className="hidden md:block w-1/2 h-screen sticky top-0 flex items-center justify-center">
              <div className="relative w-full aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl">
                 <AnimatePresence mode="wait">
@@ -142,7 +175,6 @@ const Events = () => {
                   />
                 </AnimatePresence>
                 
-                {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60" />
                 <div className="absolute bottom-8 left-8 text-white">
                    <p className="text-xs uppercase tracking-widest font-bold opacity-80">Currently Viewing</p>
@@ -168,7 +200,7 @@ const Events = () => {
          </button>
       </section>
 
-      {/* MODAL (Same as before) */}
+      {/* --- MODAL FORM (Connected to Supabase) --- */}
       <AnimatePresence>
         {showModal && (
           <motion.div 
@@ -178,15 +210,62 @@ const Events = () => {
           >
             <div 
               onClick={(e) => e.stopPropagation()}
-              className="bg-white w-full max-w-md p-8 rounded-[2rem] relative text-black"
+              className="bg-white w-full max-w-lg p-8 rounded-[2rem] relative text-black max-h-[90vh] overflow-y-auto"
             >
                <X className="absolute top-6 right-6 cursor-pointer text-zinc-400 hover:text-black" onClick={() => setShowModal(false)} />
+               
                <h3 className="text-3xl font-serif mb-2">Inquire</h3>
-               <p className="text-zinc-500 mb-6 text-sm">We will contact you within 24 hours.</p>
-               <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); alert("Sent!"); setShowModal(false); }}>
-                  <input type="text" placeholder="Your Name" required className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-black" />
-                  <input type="email" placeholder="Email" required className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-black" />
-                  <button className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-[#d4af37] transition-colors">Send Request</button>
+               <p className="text-zinc-500 mb-6 text-sm">Fill out the details below for your event.</p>
+               
+               <form className="space-y-4" onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input 
+                      type="text" placeholder="Name" required 
+                      className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-black"
+                      value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
+                    />
+                    <input 
+                      type="email" placeholder="Email" required 
+                      className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-black"
+                      value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <select 
+                      className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-black"
+                      value={formData.event_type} onChange={e => setFormData({...formData, event_type: e.target.value})}
+                    >
+                      <option value="Wedding">Wedding</option>
+                      <option value="Corporate">Corporate</option>
+                      <option value="Social">Social Gathering</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <input 
+                      type="number" placeholder="Guests" required 
+                      className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-black"
+                      value={formData.guests} onChange={e => setFormData({...formData, guests: Number(e.target.value)})}
+                    />
+                  </div>
+
+                  <input 
+                    type="date" required 
+                    className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-black text-zinc-500"
+                    value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
+                  />
+                  
+                  <textarea 
+                    placeholder="Tell us more about your vision..." 
+                    className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-black min-h-[100px]"
+                    value={formData.message} onChange={e => setFormData({...formData, message: e.target.value})}
+                  />
+
+                  <button 
+                    disabled={loading}
+                    className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-[#d4af37] transition-colors disabled:opacity-50"
+                  >
+                    {loading ? "Sending..." : "Send Request"}
+                  </button>
                </form>
             </div>
           </motion.div>

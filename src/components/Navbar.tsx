@@ -39,6 +39,7 @@ const Navbar = () => {
     };
 
     checkUser();
+    
 
     // Listen for changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {

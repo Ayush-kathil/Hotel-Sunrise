@@ -10,7 +10,9 @@ import Dashboard from './components/UserDashboard';
 import Terms from './pages/Terms';
 import Events from './pages/Events';
 import SmoothScroll from './components/SmoothScroll'; // <--- IMPORT THIS
-import Booking from './pages/BookingPage'; // Check the filename match!
+import Booking from './pages/BookingPage'; // Check the filename match!\
+import AdminDashboard from './pages/AdminDashboard';
+
 
 
 
@@ -32,6 +34,7 @@ const AppContent = () => {
         <Route path="/terms" element={<Terms />} />
         <Route path="/events" element={<Events />} />
         <Route path="/booking" element={<Booking />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </>
   );
