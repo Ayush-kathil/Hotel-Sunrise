@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, ArrowRight, UserPlus, XCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, UserPlus, XCircle, Chrome } from 'lucide-react'; // Added Chrome icon for Google
 import { toast } from 'sonner';
 
 const Login = () => {
@@ -10,7 +10,7 @@ const Login = () => {
   const location = useLocation();
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showErrorCard, setShowErrorCard] = useState(false); // Controls the Premium Error Card
+  const [showErrorCard, setShowErrorCard] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -18,8 +18,30 @@ const Login = () => {
     fullName: ''
   });
 
+  // Where to go after login?
   const savedRoom = location.state?.room;
 
+  // 1. GOOGLE LOGIN HANDLER
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          // This redirects them back to your site after Google login
+          redirectTo: window.location.origin + (savedRoom ? '/booking' : '/profile'),
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error("Google Login Failed", { description: error.message });
+    }
+  };
+
+  // 2. EMAIL LOGIN HANDLER
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -43,13 +65,12 @@ const Login = () => {
         });
 
         if (error) {
-           // Invalid credentials -> Show Premium Error Card
-           setShowErrorCard(true);
+           setShowErrorCard(true); // Show Premium Error Card
            setLoading(false);
            return;
         }
 
-        // --- ROLE CHECK (The Logic Fix) ---
+        // --- ROLE CHECK ---
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -58,13 +79,12 @@ const Login = () => {
 
         toast.success("Welcome Back");
         
-        // Intelligent Redirect
         if (profile?.role === 'admin') {
-           navigate('/dashboard'); // Admin -> Dashboard
+           navigate('/dashboard');
         } else if (savedRoom) {
-           navigate('/booking', { state: { room: savedRoom } }); // Back to booking if interrupted
+           navigate('/booking', { state: { room: savedRoom } });
         } else {
-           navigate('/profile'); // Normal User -> Profile
+           navigate('/profile');
         }
       }
     } catch (error: any) {
@@ -77,9 +97,9 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fcfbf9] relative overflow-hidden px-6">
       
-      {/* Background Decoration (PRESERVED) */}
+      {/* --- LAMP / GLOW EFFECTS PRESERVED --- */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#d4af37]/10 rounded-full blur-[100px]" />
+         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#d4af37]/10 rounded-full blur-[100px] animate-pulse" />
          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-zinc-900/5 rounded-full blur-[100px]" />
       </div>
 
@@ -88,7 +108,7 @@ const Login = () => {
         className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-white/50 relative z-10"
       >
         {/* Toggle Header */}
-        <div className="flex justify-center mb-10 bg-zinc-100 p-1 rounded-full w-fit mx-auto">
+        <div className="flex justify-center mb-8 bg-zinc-100 p-1 rounded-full w-fit mx-auto">
            <button 
              onClick={() => { setIsSignUp(false); setShowErrorCard(false); }}
              className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all ${!isSignUp ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'}`}
@@ -103,9 +123,24 @@ const Login = () => {
            </button>
         </div>
 
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
            <h1 className="text-3xl font-serif font-bold mb-2">{isSignUp ? 'Join the Club' : 'Welcome Back'}</h1>
            <p className="text-zinc-400 text-sm">Enter your details to access your account.</p>
+        </div>
+
+        {/* --- GOOGLE BUTTON ADDED HERE --- */}
+        <button 
+          onClick={handleGoogleLogin}
+          className="w-full py-3 mb-6 bg-white border border-zinc-200 text-zinc-700 font-bold rounded-xl hover:bg-zinc-50 transition-all flex justify-center items-center gap-2 shadow-sm"
+        >
+          <Chrome size={20} className="text-red-500" /> 
+          <span>Continue with Google</span>
+        </button>
+
+        <div className="flex items-center gap-4 mb-6">
+           <div className="h-[1px] bg-zinc-200 flex-1"></div>
+           <span className="text-xs text-zinc-400 font-bold uppercase">Or use email</span>
+           <div className="h-[1px] bg-zinc-200 flex-1"></div>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
@@ -143,7 +178,7 @@ const Login = () => {
            </button>
         </form>
 
-        {/* --- PREMIUM "ACCOUNT NOT FOUND" CARD (PRESERVED) --- */}
+        {/* --- ERROR CARD (PRESERVED) --- */}
         <AnimatePresence>
           {showErrorCard && (
             <motion.div 
