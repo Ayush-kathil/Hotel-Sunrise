@@ -4,15 +4,14 @@ import { LogIn, Phone, UtensilsCrossed, Calendar, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabaseClient';
 
-
 const navLinks = [
   { name: "Rooms", path: "/rooms", icon: null },
   { name: "Dining", path: "/dining", icon: <UtensilsCrossed size={16} /> },
   { name: "Events", path: "/events", icon: <Calendar size={16} /> },
   { name: "Contact", path: "/contact", icon: <Phone size={16} /> },
-  // ADD THIS LINE:
-  { name: "Terms", path: "/terms", icon: null }, 
+  { name: "Terms", path: "/terms", icon: null }, // Added as requested
 ];
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<{ name: string, photo: string | null } | null>(null);
@@ -39,7 +38,6 @@ const Navbar = () => {
     };
 
     checkUser();
-    
 
     // Listen for changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -55,8 +53,6 @@ const Navbar = () => {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  
 
   return (
     <>

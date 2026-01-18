@@ -1,11 +1,12 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Wifi, Tv, Coffee, Wind, ArrowRight, Check, Maximize } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // --- COMPONENTS ---
 
-const RevealText = ({ text, className = "" }: { text: string, className?: string }) => (
+// 1. Reveal Text Animation Wrapper
+const RevealText = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
   <div className={`overflow-hidden ${className}`}>
     <motion.div
       initial={{ y: "100%" }}
@@ -13,11 +14,12 @@ const RevealText = ({ text, className = "" }: { text: string, className?: string
       viewport={{ once: true }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
     >
-      {text}
+      {children}
     </motion.div>
   </div>
 );
 
+// 2. Parallax Image Component
 const ParallaxImage = ({ src, alt }: { src: string, alt: string }) => {
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
@@ -35,7 +37,7 @@ const Rooms = () => {
   const navigate = useNavigate();
 
   const handleBookNow = (room: any) => {
-    // Navigate to /booking and pass the room data
+    // Navigate to /booking and pass the room data in "state"
     navigate('/booking', { state: { room } });
   };
 
@@ -88,7 +90,7 @@ const Rooms = () => {
   ];
 
   return (
-    <div className="w-full bg-[#fcfbf9] text-zinc-900 font-sans selection:bg-[#d4af37] selection:text-white">
+    <div className="w-full bg-[#fcfbf9] text-zinc-900 font-sans selection:bg-[#d4af37] selection:text-white pb-20">
       
       {/* 1. HERO SECTION */}
       <section className="h-[80vh] flex flex-col justify-center items-center relative overflow-hidden bg-black text-white">
@@ -98,7 +100,9 @@ const Rooms = () => {
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 text-center px-4">
           <motion.span initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="text-[#d4af37] font-bold tracking-[0.2em] uppercase text-xs mb-6 block">Accommodation</motion.span>
-          <div className="overflow-hidden"><motion.h1 initial={{ y: "100%" }} animate={{ y: 0 }} transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }} className="text-7xl md:text-9xl font-serif font-bold mb-6 tracking-tight">Sanctuary</motion.h1></div>
+          <RevealText>
+             <h1 className="text-7xl md:text-9xl font-serif font-bold mb-6 tracking-tight">Sanctuary</h1>
+          </RevealText>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 1 }} className="text-zinc-200 text-lg md:text-xl font-light tracking-wide max-w-lg mx-auto">Rest in a space designed for silence, comfort, and absolute peace.</motion.p>
         </div>
       </section>
@@ -127,7 +131,7 @@ const Rooms = () => {
                   ))}
                 </div>
 
-                {/* BOOK BUTTON (Navigates to BookingPage) */}
+                {/* BOOK BUTTON */}
                 <motion.button 
                   onClick={() => handleBookNow(room)}
                   whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}

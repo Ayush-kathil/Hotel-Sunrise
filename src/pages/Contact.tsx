@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Phone, Mail, Clock, Send, ArrowRight, CheckCircle, ExternalLink } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Send, CheckCircle, ExternalLink } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { toast } from 'sonner'; // PREMIUM FEATURE: Import Toast
 
 // --- ANIMATION VARIANTS (Nexus Smooth Style) ---
 const containerVariants = {
@@ -40,10 +41,15 @@ const Contact = () => {
       .insert([formData]);
 
     if (error) {
-      alert("Error: " + error.message);
+      toast.error("Failed to send message", {
+        description: error.message
+      });
     } else {
       setSent(true);
       setFormData({ name: '', email: '', subject: '', message: '' });
+      toast.success("Message Sent!", {
+        description: "Our team will respond shortly."
+      });
     }
     setLoading(false);
   };

@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useMotionValue, AnimatePresence } from 'framer-motion';
-import { Utensils, Coffee, Wine, ChefHat, ArrowDown, X, Calendar, Clock, Users, Mail, User } from 'lucide-react';
+import { Utensils, ChefHat, ArrowDown, X, Mail, User } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { toast } from 'sonner';
 
 // --- 3D TILT CARD COMPONENT ---
 const TiltCard = ({ children, className }: { children: React.ReactNode, className?: string }) => {
@@ -46,8 +47,6 @@ const FloatingIcon = ({ delay, children, x = 0 }: { delay: number, children: Rea
 
 const Dining = () => {
   const containerRef = useRef(null);
-  
-  // Parallax Logic (Only for the top hero blobs, removed for bottom image to fix gap)
   const { scrollYProgress } = useScroll({ target: containerRef });
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
 
@@ -57,6 +56,9 @@ const Dining = () => {
   const [formData, setFormData] = useState({
     name: '', email: '', date: '', time: '', guests: 2
   });
+
+  // Get Today's Date for validation
+  const today = new Date().toISOString().split('T')[0];
 
   // --- SUBMIT HANDLER ---
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,9 +76,11 @@ const Dining = () => {
       }]);
 
     if (error) {
-      alert("Error: " + error.message);
+      toast.error("Booking Failed: " + error.message);
     } else {
-      alert("Reservation Confirmed! We look forward to hosting you.");
+      toast.success("Table Reserved Successfully!", {
+        description: `We'll see you on ${formData.date} at ${formData.time}`
+      });
       setShowModal(false);
       setFormData({ name: '', email: '', date: '', time: '', guests: 2 });
     }
@@ -202,21 +206,17 @@ const Dining = () => {
         </div>
       </section>
 
-      {/* --- FIXED BACKGROUND BANNER (The Fix) --- */}
+      {/* --- FIXED BACKGROUND BANNER --- */}
       <section className="h-[60vh] relative flex items-center justify-center overflow-hidden">
-        
-        {/* 1. The Image Layer */}
         <div className="absolute inset-0 z-0">
            <img 
              src="https://media.designcafe.com/wp-content/uploads/2020/11/25100115/green-dining-table-decor.jpg" 
-             className="w-full h-full object-cover" // Removed brightness-50 here, added overlay below
+             className="w-full h-full object-cover" 
              alt="Private Dining"
            />
-           {/* 2. The Dark Overlay (Ensures text is readable) */}
            <div className="absolute inset-0 bg-black/60"></div>
         </div>
         
-        {/* 3. The Content Layer */}
         <div className="relative z-10 text-center text-white px-6">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
@@ -272,61 +272,62 @@ const Dining = () => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Name</label>
-                       <div className="relative">
-                         <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                         <input 
-                           type="text" required
-                           className="w-full pl-10 p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 transition-colors"
-                           placeholder="John Doe"
-                           value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
-                         />
-                       </div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Name</label>
+                        <div className="relative">
+                          <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+                          <input 
+                            type="text" required
+                            className="w-full pl-10 p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 transition-colors"
+                            placeholder="John Doe"
+                            value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
+                          />
+                        </div>
                     </div>
                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Email</label>
-                       <div className="relative">
-                         <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
-                         <input 
-                           type="email" required
-                           className="w-full pl-10 p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 transition-colors"
-                           placeholder="john@email.com"
-                           value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
-                         />
-                       </div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Email</label>
+                        <div className="relative">
+                          <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
+                          <input 
+                            type="email" required
+                            className="w-full pl-10 p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 transition-colors"
+                            placeholder="john@email.com"
+                            value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+                          />
+                        </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Date</label>
-                       <div className="relative">
-                         <input 
-                           type="date" required
-                           className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 text-sm"
-                           value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
-                         />
-                       </div>
-                     </div>
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Time</label>
-                       <div className="relative">
-                         <input 
-                           type="time" required
-                           className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 text-sm"
-                           value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})}
-                         />
-                       </div>
-                     </div>
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Guests</label>
-                       <select 
-                         className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 text-sm appearance-none"
-                         value={formData.guests} onChange={e => setFormData({...formData, guests: Number(e.target.value)})}
-                       >
-                         {[2,3,4,5,6,8,10].map(n => <option key={n} value={n}>{n}</option>)}
-                       </select>
-                     </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Date</label>
+                        <div className="relative">
+                          <input 
+                            type="date" required
+                            min={today}
+                            className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 text-sm"
+                            value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Time</label>
+                        <div className="relative">
+                          <input 
+                            type="time" required
+                            className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 text-sm"
+                            value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-2">Guests</label>
+                        <select 
+                          className="w-full p-4 bg-zinc-50 border border-zinc-200 rounded-xl outline-none focus:border-orange-400 text-sm appearance-none"
+                          value={formData.guests} onChange={e => setFormData({...formData, guests: Number(e.target.value)})}
+                        >
+                          {[2,3,4,5,6,8,10].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
                   </div>
 
                   <button 
