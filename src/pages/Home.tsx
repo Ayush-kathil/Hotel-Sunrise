@@ -90,7 +90,7 @@ const Home = () => {
         </FadeIn>
         <div className="container mx-auto px-6">
           <motion.div style={{ scale: imgScale, borderRadius: imgRadius }} className="aspect-video w-full overflow-hidden shadow-2xl relative">
-            <img src="https://pix6.agoda.net/hotelImages/9783986/-1/518a8ada6d4cfa02df735dbf6d12188d.jpg" className="w-full h-full object-cover" alt="Grand Lobby"/>
+            <img src="https://images.unsplash.com/photo-1621293954908-907159247fc8?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" className="w-full h-full object-cover" alt="Grand Lobby"/>
           </motion.div>
         </div>
       </section>
