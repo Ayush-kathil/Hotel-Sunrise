@@ -1,225 +1,280 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { ShieldAlert, Users, Calendar, Coffee, LogOut, CheckCircle, XCircle } from 'lucide-react';
+import { LayoutDashboard, Calendar, Utensils, Users, MessageSquare, 
+  LogOut, Search, TrendingUp, DollarSign, Bell 
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
-// --- TYPES (Fixes the "Property does not exist" errors) ---
+
+// --- TYPES ---
 interface Booking {
-  id: string;
-  room_name: string;
-  user_id: string;
-  check_in: string;
-  total_price: number;
-  status: string;
+  id: string; room_name: string; user_id: string; check_in: string; total_price: number; status: string;
 }
-
-interface DiningReservation {
-  id: string;
-  name: string;
-  email: string;
-  date: string;
-  time: string;
-  guests: number;
+interface Dining {
+  id: string; name: string; email: string; date: string; time: string; guests: number;
 }
-
-interface EventInquiry {
-  id: string;
-  name: string;
-  email: string;
-  event_type: string;
-  date: string;
-  guests: number;
+interface Event {
+  id: string; name: string; email: string; event_type: string; date: string; guests: number;
+}
+interface UserProfile {
+  id: string; full_name: string; email: string; role: string; mobile: string;
 }
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
-  // State with proper types
+  // Data State
+  const [stats, setStats] = useState({ revenue: 0, totalBookings: 0, totalUsers: 0 });
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [dining, setDining] = useState<DiningReservation[]>([]);
-  const [events, setEvents] = useState<EventInquiry[]>([]);
+  const [dining, setDining] = useState<Dining[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
 
+  // --- FETCH DATA ---
   useEffect(() => {
-    const fetchAdminData = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          navigate('/login');
-          return;
-        }
+    const fetchData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { navigate('/login'); return; }
 
-        // 1. Check Admin Role
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profileError || profile?.role !== 'admin') {
-          setErrorMsg("Access Denied: You do not have administrator privileges.");
-          setLoading(false);
-          return;
-        }
-
-        // 2. Fetch All Data (Parallel for speed)
-        const [bookingsRes, diningRes, eventsRes] = await Promise.all([
-          supabase.from('bookings').select('*').order('created_at', { ascending: false }),
-          supabase.from('dining_reservations').select('*').order('created_at', { ascending: false }),
-          supabase.from('event_inquiries').select('*').order('created_at', { ascending: false })
-        ]);
-
-        if (bookingsRes.error) throw bookingsRes.error;
-        if (diningRes.error) throw diningRes.error;
-        if (eventsRes.error) throw eventsRes.error;
-
-        setBookings(bookingsRes.data || []);
-        setDining(diningRes.data || []);
-        setEvents(eventsRes.data || []);
-
-      } catch (err: any) {
-        setErrorMsg(err.message || "An unexpected error occurred.");
-      } finally {
-        setLoading(false);
+      // Check Admin Role
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (profile?.role !== 'admin') {
+        alert("Access Denied");
+        navigate('/');
+        return;
       }
-    };
 
-    fetchAdminData();
+      // Fetch All Tables
+      const [bRes, dRes, eRes, uRes] = await Promise.all([
+        supabase.from('bookings').select('*').order('created_at', { ascending: false }),
+        supabase.from('dining_reservations').select('*').order('created_at', { ascending: false }),
+        supabase.from('event_inquiries').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*').order('created_at', { ascending: false })
+      ]);
+
+      const bData = bRes.data || [];
+      const uData = uRes.data || [];
+
+      setBookings(bData);
+      setDining(dRes.data || []);
+      setEvents(eRes.data || []);
+      setUsers(uData);
+
+      // Calculate Stats
+      const totalRev = bData.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
+      setStats({
+        revenue: totalRev,
+        totalBookings: bData.length,
+        totalUsers: uData.length
+      });
+
+      setLoading(false);
+    };
+    fetchData();
   }, [navigate]);
 
-  // --- RENDER STATES ---
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 font-serif text-xl">
-        Loading Admin Panel...
-      </div>
+  // --- HELPER: FILTER DATA ---
+  const filterData = (data: any[]) => {
+    if (!searchTerm) return data;
+    return data.filter(item => 
+      JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }
+  };
 
-  if (errorMsg) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 p-6 text-center">
-        <XCircle className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-3xl font-serif text-black mb-2">Access Denied</h1>
-        <p className="text-zinc-500 mb-6">{errorMsg}</p>
-        <button 
-          onClick={() => navigate('/')}
-          className="px-6 py-3 bg-black text-white rounded-full font-bold hover:bg-zinc-800 transition-colors"
-        >
-          Return Home
-        </button>
-      </div>
-    );
-  }
+  if (loading) return <div className="h-screen flex items-center justify-center bg-zinc-50">Loading Dashboard...</div>;
 
   return (
-    <div className="min-h-screen bg-[#fcfbf9] pt-24 pb-20 px-6 font-sans">
-      <div className="max-w-7xl mx-auto">
+    <div className="flex h-screen bg-[#f8f9fa] font-sans text-zinc-800">
+      
+      {/* 1. SIDEBAR */}
+      <aside className="w-64 bg-white border-r border-zinc-200 hidden md:flex flex-col">
+        <div className="p-8">
+           <h1 className="text-2xl font-serif font-bold text-[#d4af37]">SUNRISE</h1>
+           <p className="text-xs text-zinc-400 tracking-widest uppercase mt-1">Admin Portal</p>
+        </div>
         
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 border-b border-zinc-200 pb-6">
-          <div>
-            <h1 className="text-4xl font-serif mb-2 flex items-center gap-3">
-              <ShieldAlert className="text-[#d4af37]" /> Admin Dashboard
-            </h1>
-            <p className="text-zinc-500">Overview of all hotel operations.</p>
-          </div>
-          <button 
-             onClick={() => navigate('/')}
-             className="mt-4 md:mt-0 flex items-center gap-2 text-zinc-400 hover:text-black transition-colors font-bold text-xs uppercase tracking-widest"
-          >
-            <LogOut size={16} /> Exit Panel
+        <nav className="flex-1 px-4 space-y-2">
+          {[
+            { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
+            { id: 'bookings', icon: Calendar, label: 'Room Bookings' },
+            { id: 'dining', icon: Utensils, label: 'Dining' },
+            { id: 'events', icon: MessageSquare, label: 'Inquiries' },
+            { id: 'users', icon: Users, label: 'User Database' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
+                activeTab === item.id 
+                ? 'bg-black text-white shadow-lg' 
+                : 'text-zinc-500 hover:bg-zinc-50 hover:text-black'
+              }`}
+            >
+              <item.icon size={18} />
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t border-zinc-100">
+          <button onClick={() => navigate('/')} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+            <LogOut size={18} /> Exit Dashboard
           </button>
         </div>
+      </aside>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          
-          {/* 1. ROOM BOOKINGS */}
-          <div className="bg-white p-6 rounded-[2rem] shadow-xl shadow-zinc-200/50 border border-zinc-100">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Calendar className="text-blue-500" /> Room Bookings
-              <span className="ml-auto bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs">{bookings.length}</span>
-            </h2>
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-              {bookings.length === 0 ? <p className="text-zinc-400 text-sm">No bookings yet.</p> : bookings.map((item) => (
-                <div key={item.id} className="p-5 bg-zinc-50 rounded-2xl border border-zinc-100 hover:border-blue-200 transition-colors">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-serif font-bold text-lg">{item.room_name}</span>
-                    <span className="text-green-600 font-bold bg-green-50 px-2 py-1 rounded text-xs">₹{item.total_price.toLocaleString()}</span>
-                  </div>
-                  <p className="text-xs text-zinc-400 uppercase tracking-wider font-bold mb-1">Check In</p>
-                  <p className="text-sm text-zinc-700 mb-2">{item.check_in}</p>
-                  <div className="flex items-center gap-2 text-[10px] text-zinc-400">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span> Confirmed
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* 2. MAIN CONTENT */}
+      <main className="flex-1 overflow-y-auto">
+        
+        {/* TOP HEADER */}
+        <header className="bg-white border-b border-zinc-200 px-8 py-5 flex justify-between items-center sticky top-0 z-20">
+           <h2 className="text-xl font-bold capitalize">{activeTab}</h2>
+           <div className="flex items-center gap-4">
+             <div className="relative">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+               <input 
+                 type="text" 
+                 placeholder="Search..." 
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 className="pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-full text-sm outline-none focus:border-[#d4af37] w-64 transition-all"
+               />
+             </div>
+             <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-500">
+               <Bell size={18} />
+             </div>
+           </div>
+        </header>
 
-          {/* 2. DINING RESERVATIONS */}
-          <div className="bg-white p-6 rounded-[2rem] shadow-xl shadow-zinc-200/50 border border-zinc-100">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Coffee className="text-orange-500" /> Dining
-              <span className="ml-auto bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-xs">{dining.length}</span>
-            </h2>
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-              {dining.length === 0 ? <p className="text-zinc-400 text-sm">No reservations found.</p> : dining.map((item) => (
-                <div key={item.id} className="p-5 bg-zinc-50 rounded-2xl border border-zinc-100 hover:border-orange-200 transition-colors">
-                  <h3 className="font-bold text-lg mb-1">{item.name}</h3>
-                  <a href={`mailto:${item.email}`} className="text-xs text-blue-500 hover:underline block mb-3">{item.email}</a>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white p-2 rounded-lg text-center border border-zinc-100">
-                       <p className="text-[10px] text-zinc-400 uppercase">Date</p>
-                       <p className="font-bold text-sm">{item.date}</p>
-                    </div>
-                    <div className="bg-white p-2 rounded-lg text-center border border-zinc-100">
-                       <p className="text-[10px] text-zinc-400 uppercase">Time</p>
-                       <p className="font-bold text-sm">{item.time}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                    <Users size={12} /> {item.guests} Guests
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div className="p-8 max-w-7xl mx-auto space-y-8">
 
-          {/* 3. EVENT INQUIRIES */}
-          <div className="bg-white p-6 rounded-[2rem] shadow-xl shadow-zinc-200/50 border border-zinc-100">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Users className="text-purple-500" /> Events
-              <span className="ml-auto bg-purple-50 text-purple-600 px-3 py-1 rounded-full text-xs">{events.length}</span>
-            </h2>
-            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-              {events.length === 0 ? <p className="text-zinc-400 text-sm">No inquiries yet.</p> : events.map((item) => (
-                <div key={item.id} className="p-5 bg-zinc-50 rounded-2xl border border-zinc-100 hover:border-purple-200 transition-colors">
-                  <div className="flex justify-between items-start">
-                     <h3 className="font-bold text-lg">{item.name}</h3>
-                     <span className="bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded font-bold uppercase">{item.event_type}</span>
-                  </div>
-                  <a href={`mailto:${item.email}`} className="text-xs text-blue-500 hover:underline block mb-3">{item.email}</a>
-                  
-                  <div className="bg-white p-3 rounded-xl border border-zinc-100 text-sm text-zinc-600 mb-3">
-                    <span className="block text-[10px] text-zinc-400 uppercase font-bold mb-1">Date Requested</span>
-                    {item.date}
-                  </div>
-                  <div className="text-xs text-zinc-500 font-medium">
-                    Est. {item.guests} Guests
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* OVERVIEW STATS (Only on Overview Tab) */}
+          {activeTab === 'overview' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <StatCard title="Total Revenue" value={`₹${stats.revenue.toLocaleString()}`} icon={DollarSign} color="bg-green-500" />
+              <StatCard title="Active Bookings" value={stats.totalBookings} icon={Calendar} color="bg-blue-500" />
+              <StatCard title="Total Users" value={stats.totalUsers} icon={Users} color="bg-purple-500" />
+            </motion.div>
+          )}
+
+          {/* DYNAMIC CONTENT TABLE */}
+          <div className="bg-white rounded-[2rem] shadow-sm border border-zinc-200 overflow-hidden">
+             
+             {/* -- USERS VIEW -- */}
+             {activeTab === 'users' && (
+                <Table 
+                  headers={['Name', 'Email', 'Role', 'Mobile', 'Joined']}
+                  data={filterData(users)}
+                  renderRow={(user: UserProfile) => (
+                    <>
+                      <td className="p-4 font-bold">{user.full_name || 'Guest'}</td>
+                      <td className="p-4 text-zinc-500">{user.email}</td>
+                      <td className="p-4"><span className={`px-2 py-1 rounded text-xs font-bold uppercase ${user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-zinc-100 text-zinc-600'}`}>{user.role}</span></td>
+                      <td className="p-4 text-zinc-500">{user.mobile || '-'}</td>
+                      <td className="p-4 text-zinc-400 text-xs">Recently</td>
+                    </>
+                  )}
+                />
+             )}
+
+             {/* -- BOOKINGS VIEW -- */}
+             {(activeTab === 'bookings' || activeTab === 'overview') && (
+                <Table 
+                  headers={['Room', 'Guest ID', 'Check In', 'Price', 'Status']}
+                  data={filterData(bookings)}
+                  renderRow={(item: Booking) => (
+                    <>
+                      <td className="p-4 font-bold font-serif">{item.room_name}</td>
+                      <td className="p-4 text-xs text-zinc-400 font-mono">{item.user_id.slice(0,8)}...</td>
+                      <td className="p-4 text-zinc-600">{item.check_in}</td>
+                      <td className="p-4 font-bold text-green-600">₹{item.total_price.toLocaleString()}</td>
+                      <td className="p-4"><span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold uppercase">Confirmed</span></td>
+                    </>
+                  )}
+                />
+             )}
+
+             {/* -- DINING VIEW -- */}
+             {activeTab === 'dining' && (
+                <Table 
+                   headers={['Guest Name', 'Date', 'Time', 'Party Size', 'Contact']}
+                   data={filterData(dining)}
+                   renderRow={(item: Dining) => (
+                     <>
+                       <td className="p-4 font-bold">{item.name}</td>
+                       <td className="p-4 text-zinc-600">{item.date}</td>
+                       <td className="p-4 text-zinc-600">{item.time}</td>
+                       <td className="p-4"><span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-bold">{item.guests} Guests</span></td>
+                       <td className="p-4 text-blue-500 text-sm hover:underline cursor-pointer">{item.email}</td>
+                     </>
+                   )}
+                />
+             )}
+
+             {/* -- EVENTS VIEW -- */}
+             {activeTab === 'events' && (
+                <Table 
+                   headers={['Event Type', 'Organizer', 'Date', 'Est. Guests', 'Details']}
+                   data={filterData(events)}
+                   renderRow={(item: Event) => (
+                     <>
+                       <td className="p-4"><span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold uppercase">{item.event_type}</span></td>
+                       <td className="p-4 font-bold">{item.name}</td>
+                       <td className="p-4 text-zinc-600">{item.date}</td>
+                       <td className="p-4 text-zinc-600">{item.guests} People</td>
+                       <td className="p-4 text-zinc-400 text-xs truncate max-w-[200px]">Click to view</td>
+                     </>
+                   )}
+                />
+             )}
           </div>
 
         </div>
-      </div>
+      </main>
     </div>
   );
 };
+
+// --- SUB-COMPONENTS ---
+const StatCard = ({ title, value, icon: Icon, color }: any) => (
+  <div className="bg-white p-6 rounded-2xl shadow-sm border border-zinc-100 flex items-center gap-4">
+    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white ${color}`}>
+      <Icon size={24} />
+    </div>
+    <div>
+      <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider">{title}</p>
+      <h3 className="text-2xl font-bold text-zinc-900">{value}</h3>
+    </div>
+  </div>
+);
+
+const Table = ({ headers, data, renderRow }: any) => (
+  <div className="overflow-x-auto">
+    <table className="w-full text-left">
+      <thead className="bg-zinc-50 border-b border-zinc-100">
+        <tr>
+          {headers.map((h: string) => (
+            <th key={h} className="p-4 text-xs font-bold text-zinc-400 uppercase tracking-wider">{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-zinc-50">
+        {data.length === 0 ? (
+          <tr><td colSpan={headers.length} className="p-8 text-center text-zinc-400">No data found.</td></tr>
+        ) : (
+          data.map((item: any, i: number) => (
+            <tr key={i} className="hover:bg-zinc-50/50 transition-colors">
+              {renderRow(item)}
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+);
 
 export default AdminDashboard;
