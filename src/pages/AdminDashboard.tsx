@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { 
   LayoutDashboard, Calendar, Utensils, Users, MessageSquare, 
-  LogOut, Search, TrendingUp, DollarSign, Bell, CheckCircle
+  LogOut, Search, DollarSign, Bell, ShieldAlert
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -34,42 +34,64 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
 
-  // --- FETCH DATA ---
+  // --- FETCH DATA & CHECK SECURITY ---
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { navigate('/login'); return; }
+    const fetchAdminData = async () => {
+      try {
+        // 1. GET USER SESSION
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          navigate('/login'); 
+          return;
+        }
 
-      // We don't need to check role manually here because RLS (Security Policies) 
-      // will simply return empty arrays if you aren't an admin.
-      
-      // Fetch All Tables
-      const [bRes, dRes, eRes, uRes] = await Promise.all([
-        supabase.from('bookings').select('*').order('created_at', { ascending: false }),
-        supabase.from('dining_reservations').select('*').order('created_at', { ascending: false }),
-        supabase.from('event_inquiries').select('*').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*').order('created_at', { ascending: false })
-      ]);
+        // 2. SECURITY CHECK: ARE YOU ADMIN? (The "Bouncer")
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
 
-      const bData = bRes.data || [];
-      const uData = uRes.data || [];
+        // If error fetching profile OR role is not admin -> KICK OUT
+        if (profileError || profile?.role !== 'admin') {
+          console.warn("Unauthorized access attempt blocked.");
+          navigate('/'); // Redirect to Home
+          return;
+        }
 
-      setBookings(bData);
-      setDining(dRes.data || []);
-      setEvents(eRes.data || []);
-      setUsers(uData);
+        // 3. IF ADMIN, FETCH ALL DATA
+        const [bRes, dRes, eRes, uRes] = await Promise.all([
+          supabase.from('bookings').select('*').order('created_at', { ascending: false }),
+          supabase.from('dining_reservations').select('*').order('created_at', { ascending: false }),
+          supabase.from('event_inquiries').select('*').order('created_at', { ascending: false }),
+          supabase.from('profiles').select('*').order('created_at', { ascending: false })
+        ]);
 
-      // Calculate Stats
-      const totalRev = bData.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
-      setStats({
-        revenue: totalRev,
-        totalBookings: bData.length,
-        totalUsers: uData.length
-      });
+        const bData = bRes.data || [];
+        const uData = uRes.data || [];
 
-      setLoading(false);
+        setBookings(bData);
+        setDining(dRes.data || []);
+        setEvents(eRes.data || []);
+        setUsers(uData);
+
+        // Calculate Stats
+        const totalRev = bData.reduce((acc, curr) => acc + (curr.total_price || 0), 0);
+        setStats({
+          revenue: totalRev,
+          totalBookings: bData.length,
+          totalUsers: uData.length
+        });
+
+      } catch (error) {
+        console.error("Dashboard Error:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchData();
+
+    fetchAdminData();
   }, [navigate]);
 
   // --- HELPER: FILTER DATA ---
@@ -80,7 +102,11 @@ const AdminDashboard = () => {
     );
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-zinc-50">Loading Dashboard...</div>;
+  if (loading) return (
+    <div className="h-screen flex items-center justify-center bg-zinc-50 font-serif text-zinc-400 animate-pulse">
+      Verifying Credentials...
+    </div>
+  );
 
   return (
     <div className="flex h-screen bg-[#f8f9fa] font-sans text-zinc-800">
@@ -89,7 +115,9 @@ const AdminDashboard = () => {
       <aside className="w-64 bg-white border-r border-zinc-200 hidden md:flex flex-col fixed h-full z-10">
         <div className="p-8">
            <h1 className="text-2xl font-serif font-bold text-[#d4af37]">SUNRISE</h1>
-           <p className="text-xs text-zinc-400 tracking-widest uppercase mt-1">Admin Portal</p>
+           <p className="text-xs text-zinc-400 tracking-widest uppercase mt-1 flex items-center gap-1">
+             <ShieldAlert size={10} className="text-green-500" /> Secure Admin
+           </p>
         </div>
         
         <nav className="flex-1 px-4 space-y-2">
