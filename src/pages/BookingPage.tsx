@@ -4,18 +4,19 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, User, CreditCard, CheckCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { toast } from 'sonner';
+import emailjs from '@emailjs/browser';
 
 const BookingPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [checkInDate, setCheckInDate] = useState(''); // Control the date input
+  const [checkInDate, setCheckInDate] = useState(''); 
   
   // Get room data passed from Rooms page
   const room = location.state?.room;
 
-  // 1. PREVENT PAST DATES (The Fix)
+  // 1. PREVENT PAST DATES
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
@@ -29,7 +30,6 @@ const BookingPage = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Please login to book a room");
-        // Pass the room state so they don't lose it after login
         navigate('/login', { state: { returnTo: '/booking', room: room } });
       } else {
         setUser(session.user);
@@ -39,38 +39,73 @@ const BookingPage = () => {
   }, [navigate, room]);
 
   const handlePayment = async (e: React.FormEvent) => {
+    // 1. START: Prevent refresh & set loading
     e.preventDefault();
     setLoading(true);
 
     if (!user) return;
 
-    // Validate Date Again
+    // 2. VALIDATION: Check Date
     if (new Date(checkInDate) < new Date(today)) {
         toast.error("Invalid Date", { description: "You cannot book a date in the past." });
         setLoading(false);
         return;
     }
 
+    // 3. DATABASE: Save to Supabase
     const { error } = await supabase
       .from('bookings')
       .insert([{
         room_name: room.name,
         price: room.price,
         total_price: room.price,
-        check_in: checkInDate, // Use the state variable
+        check_in: checkInDate,
         status: 'confirmed',
         user_id: user.id
       }]);
 
+    // 4. CHECK RESULT
     if (error) {
+      // IF FAILED: Show error toast
+      console.error("Supabase Error:", error);
       toast.error("Booking Failed", { description: error.message });
     } else {
+      // IF SUCCESS: Run Email & Redirect
+      
+      // --- PART 3: EMAIL LOGIC ---
+      try {
+        const templateParams = {
+           to_name: "Admin",
+           guest_name: user.user_metadata?.full_name || "Valued Guest",
+           guest_email: user.email,
+           room_name: room.name,
+           price: `₹${room.price.toLocaleString()}`,
+           check_in: checkInDate,
+           dashboard_link: window.location.origin + "/dashboard"
+        };
+   
+        // REPLACE THESE WITH YOUR ACTUAL KEYS FROM EMAILJS DASHBOARD
+        await emailjs.send(
+          import.meta.env.VITE_EMAILJS_SERVICE_ID,
+          import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+          templateParams,
+          import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+        );
+        
+        console.log("Admin notification email sent.");
+      } catch (emailErr) {
+        console.error("Failed to send email notification:", emailErr);
+        // We do NOT stop the user here. The booking is valid, only the email failed.
+      }
+      // ---------------------------
+
       toast.success("Booking Confirmed!", {
         description: `You have successfully booked ${room.name}`,
         icon: <CheckCircle className="text-green-500" />
       });
       navigate('/dashboard'); 
     }
+    
     setLoading(false);
   };
 
@@ -122,7 +157,7 @@ const BookingPage = () => {
                       <input 
                         type="date" 
                         required 
-                        min={today} // <--- FIX APPLIED HERE
+                        min={today}
                         value={checkInDate}
                         onChange={(e) => setCheckInDate(e.target.value)}
                         className="w-full bg-white border border-zinc-200 pl-12 p-4 rounded-xl outline-none focus:border-[#d4af37]" 
