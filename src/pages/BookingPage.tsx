@@ -22,7 +22,6 @@ const BookingPage = () => {
   const room = location.state?.room;
   const today = new Date().toISOString().split('T')[0];
 
-  // 1. Initialize & Calculate Totals
   useEffect(() => {
     if (!room) navigate('/rooms');
     else setTotalPrice(room.price);
@@ -41,14 +40,12 @@ const BookingPage = () => {
     checkUser();
   }, []);
 
-  // 2. Calculate Nights
   useEffect(() => {
     if (checkIn && checkOut) {
       const start = new Date(checkIn);
       const end = new Date(checkOut);
       const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-      
       if (diffDays > 0) {
         setNights(diffDays);
         setTotalPrice(diffDays * (room?.price || 0));
@@ -62,7 +59,6 @@ const BookingPage = () => {
 
     if (!user || !room) return;
 
-    // VALIDATION
     if (new Date(checkIn) < new Date(today)) {
         toast.error("Invalid Check-in Date");
         setLoading(false); return;
@@ -72,8 +68,8 @@ const BookingPage = () => {
         setLoading(false); return;
     }
 
-    // 3. DATABASE INSERT
-    console.log("Step 1: Saving to Database...");
+    // 1. DATABASE INSERT
+    console.log("Saving to Supabase...");
     const { error } = await supabase
       .from('bookings')
       .insert([{
@@ -90,43 +86,40 @@ const BookingPage = () => {
 
     if (error) {
       console.error("DB Error:", error);
-      toast.error("Booking Failed in Database", { description: error.message });
+      toast.error("Booking Failed", { description: error.message });
       setLoading(false);
     } else {
-      console.log("Step 2: Database Success. Preparing Email...");
-
-      // 4. EMAIL NOTIFICATION
-      // We define the params EXACTLY matching your HTML template
+      console.log("DB Success. Attempting Email...");
+      
+      // 2. EMAILJS SEND
       const templateParams = {
            to_name: "Admin",
            guest_name: user.user_metadata?.full_name || user.email,
            guest_email: user.email,
            room_name: room.name,
            check_in: checkIn,
-           check_out: checkOut, // Added this so you can use it in HTML if you want
+           check_out: checkOut,
            price: `₹${totalPrice.toLocaleString()}`,
-           dashboard_link: window.location.origin + "/dashboard", // Generates link like localhost:5173/dashboard
+           dashboard_link: window.location.origin + "/dashboard",
            reply_to: user.email
       };
 
+      // DEBUG: Log the exact data we are sending
+      console.log("Sending Email Params:", templateParams);
+
       try {
-        // HARDCODE YOUR KEYS HERE FOR TESTING
-        // Example: await emailjs.send('service_x9s8', 'template_9s8d', ...)
-        await emailjs.send(
-            'YOUR_SERVICE_ID', 
-            'YOUR_TEMPLATE_ID', 
-            templateParams, 
-            'YOUR_PUBLIC_KEY'
-        );
-        console.log("Step 3: ✅ Email Sent Successfully!");
+        // MAKE SURE THESE KEYS ARE CORRECT (No spaces!)
+        await emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams, 'YOUR_PUBLIC_KEY');
+        console.log("✅ Email Sent Successfully!");
         toast.success("Booking Confirmed & Email Sent!");
-      } catch (err) { 
-        console.error("Step 3: ❌ Email Failed:", err);
-        toast.warning("Booking Saved, but Email Failed.");
+      } catch (err: any) { 
+        console.error("❌ Email Failed:", err);
+        // We log the specific error text to see why it failed
+        console.error("EmailJS Error Text:", err.text); 
+        toast.warning("Booking Saved, but Email Failed. Check Console.");
       }
 
-      // 5. REDIRECT (Only happens AFTER email attempt finishes)
-      console.log("Step 4: Redirecting...");
+      // 3. REDIRECT
       navigate('/profile'); 
     }
     setLoading(false);

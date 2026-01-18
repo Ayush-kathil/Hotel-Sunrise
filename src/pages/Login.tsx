@@ -18,42 +18,38 @@ const Login = () => {
     fullName: ''
   });
 
-  // Where to go after login? (Default to Profile, or Admin if admin)
-  const returnTo = location.state?.returnTo || '/profile';
   const savedRoom = location.state?.room;
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setShowErrorCard(false); // Reset error state
+    setShowErrorCard(false);
 
     try {
       if (isSignUp) {
-        // --- SIGN UP LOGIC ---
-        const { data, error } = await supabase.auth.signUp({
+        // --- SIGN UP ---
+        const { error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
-          options: {
-            data: { full_name: formData.fullName }
-          }
+          options: { data: { full_name: formData.fullName } }
         });
         if (error) throw error;
         toast.success("Account Created!", { description: "Please check your email to verify." });
       } else {
-        // --- LOGIN LOGIC ---
+        // --- SIGN IN ---
         const { data, error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
 
         if (error) {
-           // If error is "Invalid login credentials", show the Premium Card
+           // Invalid credentials -> Show Premium Error Card
            setShowErrorCard(true);
            setLoading(false);
            return;
         }
 
-        // CHECK IF ADMIN OR USER
+        // --- ROLE CHECK (The Logic Fix) ---
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')
@@ -64,12 +60,11 @@ const Login = () => {
         
         // Intelligent Redirect
         if (profile?.role === 'admin') {
-           navigate('/dashboard');
+           navigate('/dashboard'); // Admin -> Dashboard
         } else if (savedRoom) {
-           // If they were trying to book a room, send them back to booking
-           navigate('/booking', { state: { room: savedRoom } });
+           navigate('/booking', { state: { room: savedRoom } }); // Back to booking if interrupted
         } else {
-           navigate('/profile');
+           navigate('/profile'); // Normal User -> Profile
         }
       }
     } catch (error: any) {
@@ -82,7 +77,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fcfbf9] relative overflow-hidden px-6">
       
-      {/* Background Decoration */}
+      {/* Background Decoration (PRESERVED) */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
          <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#d4af37]/10 rounded-full blur-[100px]" />
          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-zinc-900/5 rounded-full blur-[100px]" />
@@ -148,7 +143,7 @@ const Login = () => {
            </button>
         </form>
 
-        {/* --- PREMIUM "ACCOUNT NOT FOUND" CARD --- */}
+        {/* --- PREMIUM "ACCOUNT NOT FOUND" CARD (PRESERVED) --- */}
         <AnimatePresence>
           {showErrorCard && (
             <motion.div 
@@ -160,7 +155,7 @@ const Login = () => {
                </div>
                <h3 className="text-2xl font-serif font-bold text-zinc-900 mb-2">Account Not Found</h3>
                <p className="text-zinc-500 text-sm mb-8 leading-relaxed">
-                 We couldn't find an account with these credentials. You might need to sign up first.
+                 We couldn't find an account with these credentials.
                </p>
                
                <div className="flex flex-col gap-3 w-full">
