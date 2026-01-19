@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Lock, ArrowRight, Loader2, ShieldCheck, Chrome } from 'lucide-react';
-import ReCAPTCHA from "react-google-recaptcha";
+import { Turnstile } from '@marsidev/react-turnstile'; // <--- NEW IMPORT
 
 const Login = () => {
   const navigate = useNavigate();
@@ -19,10 +19,11 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   
-  // CAPTCHA REF
-  const captchaRef = useRef<ReCAPTCHA>(null);
+  // CAPTCHA TOKEN STORAGE
+  const captchaTokenRef = useRef<string | null>(null);
+  const turnstileRef = useRef<any>(null);
 
-  // --- GOOGLE LOGIN ---
+  // --- GOOGLE LOGIN (SOCIAL) ---
   const handleGoogleLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -35,14 +36,15 @@ const Login = () => {
     }
   };
 
-  // --- OTP LOGIC WITH CAPTCHA ---
+  // --- OTP LOGIC WITH CLOUDFLARE ---
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 1. GET TOKEN
-    const token = captchaRef.current?.getValue();
+    // 1. CHECK TOKEN
+    const token = captchaTokenRef.current;
+    
     if (!token) {
-      toast.error("Please verify you are human.");
+      toast.error("Please wait for the captcha to verify.");
       return;
     }
 
@@ -52,15 +54,20 @@ const Login = () => {
         email, 
         options: { 
           shouldCreateUser: true,
-          captchaToken: token // <--- SECURE TOKEN
+          captchaToken: token // <--- PASS CLOUDFLARE TOKEN HERE
         } 
       });
+      
       if (error) throw error;
+      
       setStep('verify');
       toast.success("Code sent!", { description: `Check ${email}` });
+      
     } catch (error: any) {
       toast.error("Error", { description: error.message });
-      captchaRef.current?.reset(); // Reset captcha on error
+      // Reset Captcha on error so user can try again
+      turnstileRef.current?.reset(); 
+      captchaTokenRef.current = null;
     } finally {
       setLoading(false);
     }
@@ -138,14 +145,21 @@ const Login = () => {
                     <>
                       <input type="email" required placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white focus:border-[#d4af37] outline-none" />
                       
-                      {/* RECAPTCHA WIDGET */}
-                       <div className="flex justify-center py-2">
-                        <ReCAPTCHA
-                         ref={captchaRef}
-                         sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} 
-                         theme="dark"
+                      {/* CLOUDFLARE TURNSTILE WIDGET */}
+                      <div className="flex justify-center py-2 h-[65px]">
+                        <Turnstile
+                          ref={turnstileRef}
+                          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                          onSuccess={(token) => {
+                            console.log("Captcha Solved:", token);
+                            captchaTokenRef.current = token;
+                          }}
+                          options={{
+                            theme: 'dark',
+                            size: 'normal',
+                          }}
                         />
-                       </div>
+                      </div>
                     </>
                  ) : (
                     <input type="text" required placeholder="Enter Code" value={otp} onChange={e => setOtp(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white text-center tracking-widest font-bold focus:border-[#d4af37] outline-none" />
