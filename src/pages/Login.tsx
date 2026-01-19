@@ -139,13 +139,13 @@ const Login = () => {
                       <input type="email" required placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white focus:border-[#d4af37] outline-none" />
                       
                       {/* RECAPTCHA WIDGET */}
-                      <div className="flex justify-center py-2">
+                       <div className="flex justify-center py-2">
                         <ReCAPTCHA
-                          ref={captchaRef}
-                          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} // <--- USE VARIABLE
-                          theme="dark"
+                         ref={captchaRef}
+                         sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} 
+                         theme="dark"
                         />
-                      </div>
+                       </div>
                     </>
                  ) : (
                     <input type="text" required placeholder="Enter Code" value={otp} onChange={e => setOtp(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white text-center tracking-widest font-bold focus:border-[#d4af37] outline-none" />
