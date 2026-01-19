@@ -142,7 +142,7 @@ const Login = () => {
                       <div className="flex justify-center py-2">
                         <ReCAPTCHA
                           ref={captchaRef}
-                          sitekey="YOUR_SITE_KEY_FROM_GOOGLE" // <--- PASTE SITE KEY HERE
+                          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} // <--- USE VARIABLE
                           theme="dark"
                         />
                       </div>
