@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Mail, Lock, ArrowRight, Loader2, ShieldCheck, KeyRound, Chrome } from 'lucide-react';
+import { Lock, ArrowRight, Loader2, ShieldCheck, Chrome } from 'lucide-react';
+import ReCAPTCHA from "react-google-recaptcha";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -17,15 +18,16 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
+  
+  // CAPTCHA REF
+  const captchaRef = useRef<ReCAPTCHA>(null);
 
   // --- GOOGLE LOGIN ---
   const handleGoogleLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/profile`
-        }
+        options: { redirectTo: `${window.location.origin}/profile` }
       });
       if (error) throw error;
     } catch (error: any) {
@@ -33,19 +35,32 @@ const Login = () => {
     }
   };
 
-  // --- OTP LOGIC ---
+  // --- OTP LOGIC WITH CAPTCHA ---
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 1. GET TOKEN
+    const token = captchaRef.current?.getValue();
+    if (!token) {
+      toast.error("Please verify you are human.");
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({ 
-        email, options: { shouldCreateUser: true } 
+        email, 
+        options: { 
+          shouldCreateUser: true,
+          captchaToken: token // <--- SECURE TOKEN
+        } 
       });
       if (error) throw error;
       setStep('verify');
       toast.success("Code sent!", { description: `Check ${email}` });
     } catch (error: any) {
       toast.error("Error", { description: error.message });
+      captchaRef.current?.reset(); // Reset captcha on error
     } finally {
       setLoading(false);
     }
@@ -99,7 +114,6 @@ const Login = () => {
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Welcome</h1>
           <p className="text-zinc-400 text-sm mb-6">Sign in to access your account</p>
           
-          {/* GOOGLE BUTTON */}
           <button onClick={handleGoogleLogin} className="w-full bg-white text-black font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-zinc-200 transition-colors mb-6">
             <Chrome size={20} /> Continue with Google
           </button>
@@ -121,7 +135,18 @@ const Login = () => {
             {mode === 'otp' ? (
               <motion.form key="otp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onSubmit={step === 'email' ? handleSendOtp : handleVerifyOtp} className="space-y-4">
                  {step === 'email' ? (
-                    <input type="email" required placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white focus:border-[#d4af37] outline-none" />
+                    <>
+                      <input type="email" required placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white focus:border-[#d4af37] outline-none" />
+                      
+                      {/* RECAPTCHA WIDGET */}
+                      <div className="flex justify-center py-2">
+                        <ReCAPTCHA
+                          ref={captchaRef}
+                          sitekey="YOUR_SITE_KEY_FROM_GOOGLE" // <--- PASTE SITE KEY HERE
+                          theme="dark"
+                        />
+                      </div>
+                    </>
                  ) : (
                     <input type="text" required placeholder="Enter Code" value={otp} onChange={e => setOtp(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white text-center tracking-widest font-bold focus:border-[#d4af37] outline-none" />
                  )}

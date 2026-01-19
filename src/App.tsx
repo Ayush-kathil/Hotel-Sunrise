@@ -22,7 +22,8 @@ import Navbar from './components/Navbar';
 import MobileNav from './components/MobileNav';
 import ScrollToTop from './components/ScrollToTop';
 import ScrollProgress from './components/ScrollProgress';
-import AdminRoute from './components/AdminRoute'; // IMPORT THE GATEKEEPER
+import AdminRoute from './components/AdminRoute';
+import ChatBot from './components/ChatBot'; // <--- IMPORT CHATBOT
 
 function App() {
   const location = useLocation();
@@ -126,6 +127,10 @@ function App() {
 
         {!isAdminRoute && <MobileNav />}
       </div>
+
+      {/* --- FLOATING CHATBOT (Visible on All Views) --- */}
+      <ChatBot />
+
     </div>
   );
 }

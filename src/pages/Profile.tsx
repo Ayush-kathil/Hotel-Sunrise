@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, User, Bell, Tag, Camera, MapPin, Calendar, Star } from 'lucide-react';
+import { LogOut, User, Bell, Tag, Camera, MapPin, Calendar, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Profile = () => {
@@ -44,14 +44,10 @@ const Profile = () => {
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `${profile.id}/${fileName}`;
 
-      // 1. Upload
       const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      // 2. Get URL
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-      // 3. Update Profile
       await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id);
       
       setProfile({ ...profile, avatar_url: publicUrl });
@@ -61,6 +57,23 @@ const Profile = () => {
       toast.error("Upload failed", { description: error.message });
     } finally {
       setUploading(false);
+    }
+  };
+
+  // --- CANCEL BOOKING (NEW) ---
+  const handleCancelBooking = async (bookingId: string, roomNumber: number) => {
+    if (!confirm("Are you sure you want to cancel this reservation? This cannot be undone.")) return;
+
+    try {
+      const { error } = await supabase.from('bookings').delete().eq('id', bookingId);
+      if (error) throw error;
+
+      toast.success("Booking Cancelled", { description: `Room #${roomNumber} is now free.` });
+      // Update UI immediately
+      setBookings(bookings.filter(b => b.id !== bookingId));
+
+    } catch (error: any) {
+      toast.error("Cancellation Failed", { description: error.message });
     }
   };
 
@@ -78,7 +91,6 @@ const Profile = () => {
         {/* --- LEFT: PROFILE CARD --- */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-zinc-100 text-center relative overflow-hidden">
-            {/* Avatar */}
             <div className="relative w-32 h-32 mx-auto mb-4 group">
                <div className="w-full h-full rounded-full overflow-hidden border-4 border-white shadow-xl bg-zinc-100">
                   {profile.avatar_url ? (
@@ -101,7 +113,6 @@ const Profile = () => {
             </button>
           </div>
 
-          {/* Notification Trigger */}
           <button onClick={() => setShowOffers(!showOffers)} className="w-full bg-black text-white p-6 rounded-2xl flex items-center justify-between shadow-lg hover:bg-[#d4af37] transition-colors group">
              <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center"><Bell size={20} /></div>
@@ -117,7 +128,6 @@ const Profile = () => {
         {/* --- RIGHT: CONTENT AREA --- */}
         <div className="lg:col-span-2 space-y-6">
            
-           {/* OFFERS SECTION (TOGGLE) */}
            <AnimatePresence>
              {showOffers && (
                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
@@ -153,9 +163,18 @@ const Profile = () => {
                           <span className="flex items-center gap-1"><Star size={14} /> {booking.nights} Nights</span>
                        </div>
                     </div>
-                    <div className="text-right">
+                    
+                    {/* STATUS & CANCEL BUTTON */}
+                    <div className="text-right flex flex-col items-end gap-2">
                        <p className="font-bold text-xl">₹{booking.total_price.toLocaleString()}</p>
                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Confirmed</span>
+                       
+                       <button 
+                         onClick={() => handleCancelBooking(booking.id, booking.room_number)}
+                         className="flex items-center gap-1 text-red-500 text-[10px] font-bold hover:bg-red-50 px-2 py-1 rounded-lg transition-colors border border-red-100 mt-1"
+                       >
+                         <Trash2 size={12} /> Cancel
+                       </button>
                     </div>
                  </div>
                ))}
