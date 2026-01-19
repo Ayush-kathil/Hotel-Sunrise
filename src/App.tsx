@@ -22,20 +22,23 @@ import Navbar from './components/Navbar';
 import MobileNav from './components/MobileNav';
 import ScrollToTop from './components/ScrollToTop';
 import ScrollProgress from './components/ScrollProgress';
+import AdminRoute from './components/AdminRoute'; // IMPORT THE GATEKEEPER
 
 function App() {
   const location = useLocation();
   const [sessionLoading, setSessionLoading] = useState(true);
 
-  // 1. CHECK IF WE ARE ON AN ADMIN PAGE (To hide Navbar)
+  // Helper to hide navbar on admin pages
   const isAdminRoute = location.pathname === '/dashboard' || location.pathname.startsWith('/admin');
 
-  // 2. GLOBAL AUTH CHECK (Prevents Flashing)
+  // Global Session Check
   useEffect(() => {
-    supabase.auth.getSession().then(() => {
+    const checkSession = async () => {
+       await supabase.auth.getSession();
        setSessionLoading(false);
-    });
-    
+    };
+    checkSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
        setSessionLoading(false);
     });
@@ -43,7 +46,6 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 3. LOADING SCREEN
   if (sessionLoading) {
      return (
        <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
@@ -57,15 +59,12 @@ function App() {
 
   return (
     <div className="bg-[#fcfbf9] min-h-screen">
-      
-      {/* GLOBAL UTILITIES */}
       <ScrollProgress />
       <ScrollToTop />
       <Toaster position="top-center" richColors /> 
 
       {/* --- DESKTOP VIEW --- */}
       <div className="hidden md:block">
-        {/* Only show Desktop Navbar if NOT on Admin Panel */}
         {!isAdminRoute && <Navbar />}
 
         <Routes>
@@ -76,17 +75,21 @@ function App() {
           <Route path="/events" element={<Events />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/dashboard" element={<AdminDashboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/terms" element={<Terms />} />
+          
+          {/* SECURE ADMIN ROUTES */}
+          <Route element={<AdminRoute />}>
+             <Route path="/admin" element={<AdminDashboard />} />
+             <Route path="/dashboard" element={<AdminDashboard />} />
+          </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
 
       {/* --- MOBILE VIEW --- */}
       <div className="md:hidden pb-24"> 
-        {/* Only show Mobile Header if NOT on Admin Panel */}
         {!isAdminRoute && (
           <div className="fixed top-0 w-full p-4 z-50 flex justify-center bg-white/0 backdrop-blur-[2px] pointer-events-none">
              <span className="text-xl font-serif font-bold tracking-widest text-[#d4af37] drop-shadow-sm">SUNRISE</span>
@@ -105,10 +108,15 @@ function App() {
                     <Route path="/events" element={<Events />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/login" element={<Login />} />
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/dashboard" element={<AdminDashboard />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/terms" element={<Terms />} />
+                    
+                    {/* SECURE ADMIN ROUTES (Mobile) */}
+                    <Route element={<AdminRoute />}>
+                       <Route path="/admin" element={<AdminDashboard />} />
+                       <Route path="/dashboard" element={<AdminDashboard />} />
+                    </Route>
+
                     <Route path="*" element={<NotFound />} />
                  </Routes>
               </PageWrapper>
@@ -116,15 +124,12 @@ function App() {
           </Routes>
         </AnimatePresence>
 
-        {/* Only show Mobile Bottom Nav if NOT on Admin Panel */}
         {!isAdminRoute && <MobileNav />}
       </div>
-      
     </div>
   );
 }
 
-// Mobile Page Transition Wrapper
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   <motion.div
     initial={{ x: "100%", opacity: 0 }}

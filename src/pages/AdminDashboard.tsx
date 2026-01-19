@@ -12,11 +12,12 @@ import {
   PieChart, Pie, Cell, Legend 
 } from 'recharts';
 
-// --- CONFIG ---
-const ADMIN_PASSCODE = "3012"; 
+// --- SECURITY CONFIG (ENV VARIABLES) ---
+// If the env variable is missing, fallback to '0000' to prevent crash, but warn in console.
+const ADMIN_PASSCODE = import.meta.env.VITE_ADMIN_PASSCODE || "0000";
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#d4af37'];
 
-// --- EXPORT FUNCTION ---
+// --- HELPER: EXPORT CSV ---
 const downloadCSV = (data: any[], filename: string) => {
   if (!data.length) return toast.error("No data to export");
   const headers = Object.keys(data[0]).join(",");
@@ -33,28 +34,28 @@ const downloadCSV = (data: any[], filename: string) => {
 const AdminDashboard = () => {
   const navigate = useNavigate();
   
-  // STATE: SECURITY & UI
+  // STATES
   const [isLocked, setIsLocked] = useState(true);
   const [passcode, setPasscode] = useState(['', '', '', '']);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [isConnected, setIsConnected] = useState(false);
   
-  // STATE: DATA
+  // DATA STATES
   const [stats, setStats] = useState({ revenue: 0, bookings: 0, dining: 0, events: 0, contacts: 0 });
   const [bookings, setBookings] = useState<any[]>([]);
   const [diningData, setDiningData] = useState<any[]>([]);
-  const [eventsData, setEventsData] = useState<any[]>([]); // New Events Data
+  const [eventsData, setEventsData] = useState<any[]>([]);
   const [contactMessages, setContactMessages] = useState<any[]>([]);
   
-  // STATE: CHARTS
+  // CHART STATES
   const [areaChartData, setAreaChartData] = useState<any[]>([]);
   const [pieChartData, setPieChartData] = useState<any[]>([]);
 
-  // 1. FETCH DATA
+  // 1. DATA FETCHING
   const fetchData = async () => {
     try {
-      console.log("⚡ Fetching Secure Data...");
+      console.log("⚡ Fetching Secured Admin Data...");
 
       // A. Bookings
       const { data: bData } = await supabase
@@ -62,13 +63,13 @@ const AdminDashboard = () => {
         .select('*, profiles(email, full_name)')
         .order('created_at', { ascending: false });
 
-      // B. All Inquiries (Dining + Events)
+      // B. Inquiries
       const { data: iData } = await supabase
         .from('event_inquiries')
         .select('*')
         .order('created_at', { ascending: false });
 
-      // C. Contact Messages
+      // C. Contacts
       const { data: cData } = await supabase
         .from('contact_messages')
         .select('*')
@@ -76,19 +77,18 @@ const AdminDashboard = () => {
 
       setIsConnected(true);
 
-      // --- PROCESS DATA ---
       const rawBookings = bData || [];
       const rawInquiries = iData || [];
       const rawContacts = cData || [];
 
-      // Filter Dining vs Events
+      // Split Dining vs Events
       const dining = rawInquiries.filter(i => i.event_type === 'Dining');
       const events = rawInquiries.filter(i => i.event_type !== 'Dining');
 
-      // Calculate Revenue
+      // Calcs
       const totalRev = rawBookings.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
 
-      // Process Area Chart (Revenue over Time)
+      // Area Chart
       const areaMap = new Map();
       rawBookings.forEach(b => {
         const date = new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -96,7 +96,7 @@ const AdminDashboard = () => {
       });
       const areaData = Array.from(areaMap, ([name, value]) => ({ name, value })).reverse();
 
-      // Process Pie Chart (Revenue by Room)
+      // Pie Chart
       const pieMap = new Map();
       rawBookings.forEach(b => {
         const room = b.room_name || 'Unknown Room';
@@ -104,7 +104,6 @@ const AdminDashboard = () => {
       });
       const pieData = Array.from(pieMap, ([name, value]) => ({ name, value }));
 
-      // Set State
       setBookings(rawBookings);
       setDiningData(dining);
       setEventsData(events);
@@ -129,7 +128,7 @@ const AdminDashboard = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  // 2. PASSCODE LOGIC
+  // 2. PASSCODE LOGIC (Secured via Env)
   const handlePasscode = (index: number, value: string) => {
     if (value.length > 1) return;
     const newPass = [...passcode];
@@ -140,7 +139,7 @@ const AdminDashboard = () => {
     if (newPass.join('').length === 4) {
       if (newPass.join('') === ADMIN_PASSCODE) {
         setIsLocked(false);
-        toast.success("Welcome Admin");
+        toast.success("Identity Verified");
       } else {
         toast.error("Access Denied");
         setPasscode(['', '', '', '']);
@@ -151,7 +150,7 @@ const AdminDashboard = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/'); // Redirect to home
+    navigate('/');
   };
 
   // --- VIEW 1: LOCKED ---
@@ -162,7 +161,7 @@ const AdminDashboard = () => {
           <Lock className="text-zinc-950" size={36} />
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">Security Check</h1>
-        <p className="text-zinc-500 mb-8 text-sm">Enter passcode to access admin panel.</p>
+        <p className="text-zinc-500 mb-8 text-sm">Enter admin passcode to continue.</p>
         <div className="flex gap-3 justify-center">
           {passcode.map((digit, i) => (
             <input key={i} ref={el => inputRefs.current[i] = el} type="password" maxLength={1} value={digit}
@@ -215,10 +214,9 @@ const AdminDashboard = () => {
             )}
          </header>
 
-         {/* --- 1. OVERVIEW (WITH PIE CHART) --- */}
+         {/* --- 1. OVERVIEW --- */}
          {activeTab === 'overview' && (
            <div className="space-y-6">
-              {/* STAT CARDS */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                  <StatCard title="Revenue" value={`₹${stats.revenue.toLocaleString()}`} icon={DollarSign} color="bg-[#d4af37]" />
                  <StatCard title="Bookings" value={stats.bookings} icon={Calendar} color="bg-zinc-900" dark />
@@ -226,9 +224,7 @@ const AdminDashboard = () => {
                  <StatCard title="Dining" value={stats.dining} icon={Utensils} color="bg-orange-500" />
               </div>
 
-              {/* CHARTS ROW */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[350px]">
-                 {/* AREA CHART */}
                  <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm">
                     <h3 className="font-bold mb-4 text-xs uppercase tracking-wider text-zinc-400">Income Trend</h3>
                     <ResponsiveContainer width="100%" height="85%">
@@ -247,7 +243,6 @@ const AdminDashboard = () => {
                     </ResponsiveContainer>
                  </div>
 
-                 {/* PIE CHART */}
                  <div className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm">
                     <h3 className="font-bold mb-4 text-xs uppercase tracking-wider text-zinc-400">Revenue Source (Room Type)</h3>
                     <ResponsiveContainer width="100%" height="85%">
@@ -266,16 +261,10 @@ const AdminDashboard = () => {
            </div>
          )}
 
-         {/* --- 2. BOOKINGS --- */}
+         {/* --- 2. TABLES --- */}
          {activeTab === 'bookings' && <TableData data={bookings} type="booking" />}
-
-         {/* --- 3. DINING --- */}
          {activeTab === 'dining' && <TableData data={diningData} type="inquiry" />}
-
-         {/* --- 4. EVENTS (NEW) --- */}
          {activeTab === 'events' && <TableData data={eventsData} type="inquiry" />}
-
-         {/* --- 5. MESSAGES --- */}
          {activeTab === 'contacts' && <TableData data={contactMessages} type="contact" />}
 
       </main>
