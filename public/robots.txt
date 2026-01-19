@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /login
+
+Sitemap: https://https://welcomesunrise.vercel.app/sitemap.xml
