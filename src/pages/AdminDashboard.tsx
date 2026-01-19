@@ -357,24 +357,37 @@ const AdminDashboard = () => {
          {/* TAB 5: INQUIRIES (CONTACTS) */}
          {activeTab === 'contacts' && (
              <div className="grid gap-4 animate-in fade-in duration-500">
-                {contacts.map((c: any) => (
-                   <div key={c.id} className="bg-white p-6 rounded-[1.5rem] border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex justify-between mb-3">
-                         <h3 className="font-bold text-lg text-zinc-900">{c.subject}</h3>
-                         <span className="text-xs font-bold text-zinc-400 bg-zinc-50 px-2 py-1 rounded-lg">{new Date(c.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <p className="text-sm text-zinc-600 mb-6 leading-relaxed bg-zinc-50/50 p-4 rounded-xl">{c.message}</p>
-                      <div className="flex justify-between items-center pt-2">
-                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-[#d4af37] text-black flex items-center justify-center font-bold text-xs">{c.full_name.charAt(0)}</div>
-                            <span className="text-sm font-bold text-zinc-600">{c.full_name}</span>
-                         </div>
-                         <a href={`mailto:${c.email}`} className="text-xs font-bold text-[#d4af37] hover:text-black flex items-center gap-1 transition-colors">
-                            Reply via Email <Mail size={12} />
-                         </a>
-                      </div>
-                   </div>
-                ))}
+                {contacts.map((c: any) => {
+                   // SAFETY CHECK: Prevent crash if name is missing
+                   const safeName = c.full_name || c.name || "Guest"; 
+                   const safeInitial = safeName.charAt(0).toUpperCase();
+
+                   return (
+                     <div key={c.id} className="bg-white p-6 rounded-[1.5rem] border border-zinc-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between mb-3">
+                           <h3 className="font-bold text-lg text-zinc-900">{c.subject || 'No Subject'}</h3>
+                           <span className="text-xs font-bold text-zinc-400 bg-zinc-50 px-2 py-1 rounded-lg">
+                             {c.created_at ? new Date(c.created_at).toLocaleDateString() : 'Date N/A'}
+                           </span>
+                        </div>
+                        <p className="text-sm text-zinc-600 mb-6 leading-relaxed bg-zinc-50/50 p-4 rounded-xl">
+                          {c.message || 'No message content.'}
+                        </p>
+                        <div className="flex justify-between items-center pt-2">
+                           <div className="flex items-center gap-2">
+                              {/* FIXED: Uses safeInitial to prevent white screen */}
+                              <div className="w-8 h-8 rounded-full bg-[#d4af37] text-black flex items-center justify-center font-bold text-xs">
+                                {safeInitial}
+                              </div>
+                              <span className="text-sm font-bold text-zinc-600">{safeName}</span>
+                           </div>
+                           <a href={`mailto:${c.email}`} className="text-xs font-bold text-[#d4af37] hover:text-black flex items-center gap-1 transition-colors">
+                              Reply via Email <Mail size={12} />
+                           </a>
+                        </div>
+                     </div>
+                   );
+                })}
                 {contacts.length === 0 && <EmptyState msg="Inbox is empty." />}
              </div>
          )}
