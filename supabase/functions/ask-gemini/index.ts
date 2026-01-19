@@ -6,22 +6,15 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // 1. Handle Browser Security (CORS)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    // 2. Get the Question
     const { question } = await req.json();
-    
-    // 3. Get the Key
     const apiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!apiKey) {
-      throw new Error("Missing GEMINI_API_KEY in Supabase Secrets");
-    }
+    if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
 
-    // 4. The Prompt
     const systemPrompt = `
       You are the AI Concierge at Hotel Sunrise.
       - Polite, brief, and helpful.
@@ -31,9 +24,8 @@ serve(async (req) => {
       User Question: ${question}
     `;
 
-    // 5. Ask Google (UPDATED MODEL NAME HERE)
-    // We switched to 'gemini-1.5-flash-latest' to fix the "Not Found" error
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+    // FIXED: Changed model to 'gemini-1.5-flash' (removed -latest)
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -43,9 +35,8 @@ serve(async (req) => {
 
     const data = await response.json();
     
-    // Check for Google Errors
     if (data.error) {
-      console.error("Google API Error:", data.error); // Log the exact error to Supabase
+      console.error("Gemini API Error:", JSON.stringify(data.error));
       throw new Error(data.error.message);
     }
     
