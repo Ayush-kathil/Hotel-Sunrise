@@ -15,13 +15,13 @@ serve(async (req) => {
     // 2. Get the Question
     const { question } = await req.json();
     
-    // 3. Get the Key from the Server Vault
+    // 3. Get the Key
     const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) {
       throw new Error("Missing GEMINI_API_KEY in Supabase Secrets");
     }
 
-    // 4. The Prompt (Hotel Persona)
+    // 4. The Prompt
     const systemPrompt = `
       You are the AI Concierge at Hotel Sunrise.
       - Polite, brief, and helpful.
@@ -31,8 +31,9 @@ serve(async (req) => {
       User Question: ${question}
     `;
 
-    // 5. Ask Google
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // 5. Ask Google (UPDATED MODEL NAME HERE)
+    // We switched to 'gemini-1.5-flash-latest' to fix the "Not Found" error
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -43,7 +44,10 @@ serve(async (req) => {
     const data = await response.json();
     
     // Check for Google Errors
-    if (data.error) throw new Error(data.error.message);
+    if (data.error) {
+      console.error("Google API Error:", data.error); // Log the exact error to Supabase
+      throw new Error(data.error.message);
+    }
     
     const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || "I am thinking...";
 
@@ -52,7 +56,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Gemini Error:", error.message);
+    console.error("Function Error:", error.message);
     return new Response(JSON.stringify({ answer: "I am having trouble connecting. Please try again." }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
