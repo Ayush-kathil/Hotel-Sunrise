@@ -5,9 +5,16 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import emailjs from '@emailjs/browser';
-import { CreditCard, Calendar as CalIcon, Users, CheckCircle, Loader2, ArrowLeft } from 'lucide-react';
-import { differenceInDays, format } from 'date-fns';
+import { CreditCard, Calendar as CalIcon, Users, CheckCircle, Loader2, ArrowLeft, User } from 'lucide-react';
+import { differenceInDays, format, addDays } from 'date-fns';
+
+// --- CONFIGURATION ---
+// Room Ranges for Smart Allocation
+const ROOM_RANGES: Record<string, number[]> = {
+  'Standard Room': Array.from({ length: 20 }, (_, i) => 101 + i), // 101-120
+  'Deluxe Room': Array.from({ length: 15 }, (_, i) => 201 + i),   // 201-215
+  'Suite': Array.from({ length: 15 }, (_, i) => 301 + i),         // 301-315
+};
 
 const BookingPage = () => {
   const location = useLocation();
@@ -18,40 +25,82 @@ const BookingPage = () => {
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, endDate] = dateRange;
   const [guests, setGuests] = useState(1);
+  const [guestName, setGuestName] = useState(''); // New: Manual Name Input
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
 
-  // --- AUTH CHECK ---
+  // --- INITIALIZATION ---
   useEffect(() => {
-    if (!room) navigate('/rooms');
-    const getUser = async () => {
+    if (!room) {
+      navigate('/rooms'); // Redirect if no room selected
+      return;
+    }
+
+    const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error("Please login to book a room");
         navigate('/login', { state: { room } });
       } else {
         setUser(session.user);
+        // Pre-fill name from metadata if available, otherwise blank
+        setGuestName(session.user.user_metadata?.full_name || '');
       }
     };
-    getUser();
-  }, [navigate, room]);
+    
+    checkSession();
+  }, [room, navigate]);
 
-  // --- PRICE CALCULATION ---
+  // Calculations
   const nights = startDate && endDate ? differenceInDays(endDate, startDate) : 0;
   const totalPrice = nights > 0 ? (room?.price || 0) * nights : 0;
 
-  // --- HANDLE PAYMENT & EMAIL ---
+  // --- SMART ROOM ALLOCATION LOGIC ---
+  const findAvailableRoom = async (checkIn: Date, checkOut: Date, roomType: string) => {
+    // 1. Determine Room Pool
+    const allRooms = ROOM_RANGES[roomType] || ROOM_RANGES['Standard Room'];
+
+    // 2. Check Database for Conflicts
+    const { data: conflicts } = await supabase
+      .from('bookings')
+      .select('room_number')
+      .eq('room_name', roomType)
+      .eq('status', 'confirmed')
+      // Overlap Formula: (StartA < EndB) and (EndA > StartB)
+      .lt('check_in', checkOut.toISOString())
+      .gt('check_out', checkIn.toISOString());
+
+    const occupiedNumbers = new Set(conflicts?.map(b => b.room_number));
+    
+    // 3. Select First Available Room
+    const availableRoom = allRooms.find(num => !occupiedNumbers.has(num));
+    
+    return availableRoom || null;
+  };
+
+  // --- BOOKING HANDLER ---
   const handlePayment = async () => {
-    if (!startDate || !endDate) return toast.error("Please select check-in and check-out dates");
-    if (!user) return toast.error("You must be logged in");
+    // Validations
+    if (!startDate || !endDate) return toast.error("Please select check-in and check-out dates.");
+    if (!guestName.trim()) return toast.error("Please enter the guest name.");
+    if (!user) return toast.error("Authentication required.");
 
     setLoading(true);
     try {
-      // 1. Save to Supabase
-      const { error } = await supabase.from('bookings').insert([
-        {
+      // Step 1: Find a Room
+      const assignedRoomNumber = await findAvailableRoom(startDate, endDate, room.name);
+      
+      if (!assignedRoomNumber) {
+        throw new Error(`We are sold out of ${room.name}s for these dates. Please try another range.`);
+      }
+
+      // Step 2: Save to Database
+      const { data: bookingData, error: dbError } = await supabase
+        .from('bookings')
+        .insert([{
           user_id: user.id,
           room_name: room.name,
+          room_number: assignedRoomNumber, // The allocated room
           price: room.price,
           total_price: totalPrice,
           check_in: startDate,
@@ -59,35 +108,34 @@ const BookingPage = () => {
           nights: nights,
           guests: guests,
           status: 'confirmed'
+        }])
+        .select()
+        .single();
+
+      if (dbError) throw dbError;
+
+      // Step 3: Send Email via Secure Edge Function (No EmailJS)
+      const { error: emailError } = await supabase.functions.invoke('send-booking-email', {
+        body: {
+          email: user.email,
+          name: guestName, // Use the name typed in the input
+          room_name: room.name,
+          room_number: assignedRoomNumber,
+          dates: `${format(startDate, 'MMM dd')} - ${format(endDate, 'MMM dd, yyyy')}`,
+          price: totalPrice.toLocaleString(),
+          booking_id: bookingData.id
         }
-      ]);
+      });
 
-      if (error) throw error;
+      if (emailError) {
+        console.error("Email Backend Failed:", emailError);
+        toast.warning("Booking confirmed, but email receipt failed.");
+      } else {
+        toast.success("Booking Confirmed!", { 
+          description: `Room #${assignedRoomNumber} assigned. Check your email.` 
+        });
+      }
 
-      // 2. Send Email (FIXED VARIABLES)
-      // Make sure your EmailJS Template uses these EXACT names:
-      // {{room_name}}, {{check_in_date}}, {{check_out_date}}, {{total_price}}, {{total_nights}}
-      const emailParams = {
-        to_name: user.user_metadata?.full_name || "Guest",
-        to_email: user.email,
-        room_name: room.name,
-        check_in_date: format(startDate, 'PP'),  // e.g. "Jan 20, 2026"
-        check_out_date: format(endDate, 'PP'),   // e.g. "Jan 22, 2026"
-        total_price: `₹${totalPrice.toLocaleString()}`,
-        total_nights: nights,
-        guests: guests
-      };
-
-      console.log("Sending Email Data:", emailParams); // Check Console to verify data
-
-      await emailjs.send(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID,
-        import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-        emailParams,
-        import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-      );
-
-      toast.success("Booking Confirmed!", { description: "Check your email for details." });
       navigate('/profile');
 
     } catch (err: any) {
@@ -101,174 +149,141 @@ const BookingPage = () => {
   if (!room) return null;
 
   return (
-    <div className="min-h-screen bg-[#fcfbf9] relative pt-24 pb-12 px-4 md:px-8">
+    <div className="min-h-screen bg-[#fcfbf9] pt-24 pb-12 px-4 font-sans text-zinc-900">
       
-      {/* CUSTOM CSS FOR SINGLE CALENDAR */}
-      <style>{`
-        .react-datepicker {
-          font-family: 'Playfair Display', serif;
-          border: none;
-          background: white;
-          box-shadow: 0 20px 50px rgba(0,0,0,0.05);
-          border-radius: 1.5rem;
-          padding: 1.5rem;
-          width: 100%; /* Force full width */
-        }
-        .react-datepicker__month-container {
-          float: none; /* Disable side-by-side */
-          width: 100%;
-        }
-        .react-datepicker__header {
-          background: white;
-          border-bottom: 1px solid #f0f0f0;
-          padding-top: 1rem;
-        }
-        .react-datepicker__day-name, .react-datepicker__day {
-          width: 2.5rem;
-          line-height: 2.5rem;
-          margin: 0.2rem;
-        }
-        .react-datepicker__day--selected, 
-        .react-datepicker__day--in-range,
-        .react-datepicker__day--in-selecting-range {
-          background-color: #d4af37 !important;
-          color: white !important;
-          border-radius: 50%;
-        }
-        .react-datepicker__day--in-range:not(.react-datepicker__day--range-start):not(.react-datepicker__day--range-end) {
-          background-color: #fcefb4 !important;
-          color: black !important;
-          border-radius: 0;
-        }
-      `}</style>
+      {/* Back Button */}
+      <button onClick={() => navigate(-1)} className="max-w-6xl mx-auto flex items-center gap-2 text-zinc-500 hover:text-black mb-8 transition-colors">
+        <ArrowLeft size={18} /> Back to Rooms
+      </button>
 
-      <div className="max-w-6xl mx-auto">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-zinc-500 hover:text-black mb-8 transition-colors">
-          <ArrowLeft size={20} /> Back to Rooms
-        </button>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          
-          {/* --- LEFT: SINGLE CALENDAR --- */}
-          <div className="lg:col-span-7 space-y-8">
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-12">
+         
+         {/* --- LEFT COLUMN: CALENDAR & DETAILS --- */}
+         <div className="lg:col-span-7 space-y-8">
             <div>
-              <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-4xl md:text-5xl font-serif font-bold text-zinc-900 mb-2">
-                {room.name}
-              </motion.h1>
-              <p className="text-zinc-500 text-lg">Select check-in and check-out dates.</p>
+               <h1 className="text-4xl font-serif font-bold mb-2">{room.name}</h1>
+               <p className="text-zinc-500 flex items-center gap-2"><CheckCircle size={16} className="text-[#d4af37]" /> Instant Confirmation • Free Cancellation</p>
             </div>
 
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              transition={{ delay: 0.1 }}
-              className="bg-white p-4 md:p-8 rounded-[2rem] shadow-xl border border-white/50 relative z-10"
-            >
-              <div className="flex justify-center w-full">
-                <DatePicker
-                  selected={startDate}
-                  onChange={(update) => setDateRange(update)}
-                  startDate={startDate}
-                  endDate={endDate}
-                  selectsRange
-                  inline
-                  monthsShown={1} // FORCE 1 MONTH
-                  minDate={new Date()}
-                  renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
-                    <div className="flex justify-between items-center px-4 py-2 mb-4">
-                      <button onClick={decreaseMonth} className="text-zinc-400 hover:text-black transition-colors text-xl">←</button>
-                      <span className="font-serif font-bold text-xl">{format(date, 'MMMM yyyy')}</span>
-                      <button onClick={increaseMonth} className="text-zinc-400 hover:text-black transition-colors text-xl">→</button>
-                    </div>
-                  )}
-                />
-              </div>
+            {/* Calendar Card */}
+            <div className="bg-white p-8 rounded-[2rem] shadow-xl border border-white/50 relative overflow-hidden">
+               <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-[#f4f4f5] rounded-full flex items-center justify-center"><CalIcon size={20} /></div>
+                  <h3 className="font-bold text-lg">Select Dates</h3>
+               </div>
 
-              {/* DATE SUMMARY */}
-              <div className="mt-8 flex flex-col md:flex-row gap-4 p-4 bg-zinc-50 rounded-2xl">
-                <div className="flex-1 text-center md:text-left">
-                  <p className="text-xs text-zinc-400 uppercase font-bold tracking-wider mb-1">Check In</p>
-                  <p className="font-serif text-lg font-bold">{startDate ? format(startDate, 'MMM dd, yyyy') : 'Select Date'}</p>
-                </div>
-                <div className="w-px bg-zinc-200 hidden md:block"></div>
-                <div className="flex-1 text-center md:text-left">
-                  <p className="text-xs text-zinc-400 uppercase font-bold tracking-wider mb-1">Check Out</p>
-                  <p className="font-serif text-lg font-bold">{endDate ? format(endDate, 'MMM dd, yyyy') : 'Select Date'}</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* GUESTS */}
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-zinc-100 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-500">
-                  <Users size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold">Guests</h3>
-                  <p className="text-sm text-zinc-400">Max capacity: {room.capacity || 2}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 bg-zinc-50 px-4 py-2 rounded-full">
-                <button onClick={() => setGuests(Math.max(1, guests - 1))} className="w-8 h-8 flex items-center justify-center bg-white rounded-full hover:bg-black hover:text-white">-</button>
-                <span className="font-bold w-4 text-center">{guests}</span>
-                <button onClick={() => setGuests(Math.min(4, guests + 1))} className="w-8 h-8 flex items-center justify-center bg-white rounded-full hover:bg-black hover:text-white">+</button>
-              </div>
+               {/* Date Picker */}
+               <div className="booking-calendar-wrapper flex justify-center">
+                 <DatePicker 
+                    selected={startDate} 
+                    onChange={(update) => setDateRange(update)} 
+                    startDate={startDate} 
+                    endDate={endDate} 
+                    selectsRange 
+                    inline 
+                    monthsShown={2} 
+                    minDate={new Date()}
+                    disabledKeyboardNavigation
+                    calendarClassName="!border-0 !font-sans"
+                 />
+               </div>
+               
+               {/* Custom CSS for DatePicker to make it Premium */}
+               <style>{`
+                 .react-datepicker { border: none; font-family: inherit; width: 100%; display: flex; justify-content: center; }
+                 .react-datepicker__month-container { margin: 0 10px; }
+                 .react-datepicker__header { bg-white; border-bottom: none; background: white; }
+                 .react-datepicker__day--selected, .react-datepicker__day--in-range { background-color: #d4af37 !important; color: black !important; border-radius: 50%; font-weight: bold; }
+                 .react-datepicker__day--keyboard-selected { background-color: transparent; color: black; }
+                 .react-datepicker__day:hover { background-color: #f4f4f5; border-radius: 50%; }
+               `}</style>
             </div>
-          </div>
 
-          {/* --- RIGHT: ORDER SUMMARY --- */}
-          <div className="lg:col-span-5">
+            {/* Guest Counter */}
+            <div className="bg-white p-6 rounded-[2rem] border border-zinc-100 flex items-center justify-between">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#f4f4f5] rounded-full flex items-center justify-center"><Users size={20} /></div>
+                  <div>
+                     <h3 className="font-bold">Guests</h3>
+                     <p className="text-xs text-zinc-500">Max {room.capacity || 2} guests</p>
+                  </div>
+               </div>
+               <div className="flex items-center gap-4 bg-zinc-50 px-4 py-2 rounded-xl">
+                  <button onClick={() => setGuests(Math.max(1, guests - 1))} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-full transition shadow-sm">-</button>
+                  <span className="font-bold w-4 text-center">{guests}</span>
+                  <button onClick={() => setGuests(Math.min(room.capacity || 4, guests + 1))} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-full transition shadow-sm">+</button>
+               </div>
+            </div>
+         </div>
+         
+         {/* --- RIGHT COLUMN: SUMMARY & PAYMENT --- */}
+         <div className="lg:col-span-5 relative">
             <div className="sticky top-24">
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                transition={{ delay: 0.2 }}
-                className="bg-black text-white p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden"
-              >
-                <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#d4af37] rounded-full blur-[80px] opacity-20 animate-pulse" />
-                <h2 className="text-2xl font-serif font-bold mb-8">Booking Summary</h2>
+              
+              {/* Summary Card */}
+              <div className="bg-black text-white p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl">
+                 <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#d4af37] rounded-full blur-[80px] opacity-20" />
+                 
+                 <h2 className="text-2xl font-serif font-bold mb-6 relative z-10">Booking Summary</h2>
 
-                <div className="space-y-4 mb-8">
-                  <div className="flex justify-between items-center text-zinc-400">
-                    <span>Rate per night</span>
-                    <span>₹{room.price.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-zinc-400">
-                    <span>Nights</span>
-                    <span>{nights} Nights</span>
-                  </div>
-                  <div className="flex justify-between items-center text-zinc-400">
-                    <span>Taxes</span>
-                    <span>₹0</span>
-                  </div>
-                  <div className="h-px bg-white/10 my-4" />
-                  <div className="flex justify-between items-center text-xl font-bold">
-                    <span>Total</span>
-                    <span className="text-[#d4af37]">₹{totalPrice.toLocaleString()}</span>
-                  </div>
-                </div>
+                 {/* Name Input (Requested Feature) */}
+                 <div className="mb-8 relative z-10">
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Guest Name</label>
+                    <div className="relative">
+                       <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                       <input 
+                         type="text" 
+                         value={guestName}
+                         onChange={(e) => setGuestName(e.target.value)}
+                         placeholder="Full Name" 
+                         className="w-full bg-white/10 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#d4af37] transition-colors"
+                       />
+                    </div>
+                 </div>
 
-                <div className="bg-white/10 p-4 rounded-xl mb-8 flex gap-3 backdrop-blur-sm">
-                  <CheckCircle className="text-[#d4af37] shrink-0" size={20} />
-                  <p className="text-xs text-zinc-300 leading-relaxed">
-                    Free cancellation up to 48 hours before check-in.
-                  </p>
-                </div>
+                 {/* Price Breakdown */}
+                 <div className="space-y-4 text-zinc-400 mb-8 border-t border-white/10 pt-6 relative z-10">
+                    <div className="flex justify-between text-sm">
+                       <span>Room Rate</span>
+                       <span>₹{room.price.toLocaleString()} / night</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                       <span>Duration</span>
+                       <span>{nights} Nights</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                       <span>Service Fee</span>
+                       <span>₹0</span>
+                    </div>
+                    <div className="h-px bg-white/10 my-2" />
+                    <div className="flex justify-between text-white font-bold text-xl items-center">
+                       <span>Total</span>
+                       <span className="text-[#d4af37]">₹{totalPrice.toLocaleString()}</span>
+                    </div>
+                 </div>
 
-                <button 
-                  onClick={handlePayment} 
-                  disabled={loading || nights === 0}
-                  className="w-full py-4 bg-[#d4af37] text-black font-bold rounded-xl hover:bg-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : <CreditCard size={20} />}
-                  {loading ? "Processing..." : "Confirm & Pay"}
-                </button>
-              </motion.div>
+                 {/* Action Button */}
+                 <button 
+                    onClick={handlePayment} 
+                    disabled={loading || !nights || !guestName} 
+                    className="w-full py-4 bg-[#d4af37] text-black font-bold rounded-xl hover:bg-white transition-all flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative z-10"
+                 >
+                    {loading ? <Loader2 className="animate-spin" /> : <CreditCard size={20} />} 
+                    {loading ? "Processing..." : "Confirm & Pay"}
+                 </button>
+
+                 <p className="text-center text-zinc-600 text-[10px] mt-4 relative z-10">
+                    By confirming, you agree to our Terms & Conditions.
+                 </p>
+              </div>
+              
+              {/* Security Badge */}
+              <div className="mt-6 flex items-center justify-center gap-2 text-zinc-400 text-xs">
+                 <CheckCircle size={12} /> Secure Booking • Instant Confirmation
+              </div>
+
             </div>
-          </div>
-
-        </div>
+         </div>
       </div>
     </div>
   );

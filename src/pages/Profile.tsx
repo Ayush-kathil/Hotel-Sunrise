@@ -1,247 +1,170 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, Calendar, MapPin, CreditCard, User, Shield, ChevronRight, Settings, Bell } from 'lucide-react';
+import { LogOut, User, Bell, Tag, Camera, MapPin, Calendar, Star } from 'lucide-react';
 import { toast } from 'sonner';
-
-// --- ANIMATION VARIANTS (The "Landing.love" Smoothness) ---
-const containerVar = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-};
-
-const itemVar = {
-  hidden: { y: 20, opacity: 0, scale: 0.95 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    scale: 1,
-    transition: { type: "spring", stiffness: 100, damping: 20 },
-  },
-};
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
-  const [viewState, setViewState] = useState<'profile' | 'dashboard'>('profile'); // Toggle between Profile & Dashboard
+  const [showOffers, setShowOffers] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const getData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/login');
-        return;
-      }
-      setUser(session.user);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return navigate('/login');
 
-      const { data, error } = await supabase
+      // 1. Get Profile
+      const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      setProfile(prof || user);
+
+      // 2. Get Bookings
+      const { data: books } = await supabase
         .from('bookings')
         .select('*')
-        .eq('user_id', session.user.id)
-        .order('check_in', { ascending: true });
-
-      if (error) console.error(error);
-      else setBookings(data || []);
-      
-      setLoading(false);
+        .eq('user_id', user.id)
+        .order('check_in', { ascending: false });
+      setBookings(books || []);
     };
-
     getData();
   }, [navigate]);
 
+  // --- PHOTO UPLOAD ---
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      if (!e.target.files || e.target.files.length === 0) return;
+      
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${profile.id}/${fileName}`;
+
+      // 1. Upload
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      // 2. Get URL
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      // 3. Update Profile
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id);
+      
+      setProfile({ ...profile, avatar_url: publicUrl });
+      toast.success("Profile photo updated!");
+      
+    } catch (error: any) {
+      toast.error("Upload failed", { description: error.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    toast.success("Logged out successfully");
     navigate('/');
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin"/>
-    </div>
-  );
+  if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-[#fcfbf9] pt-28 pb-20 px-6 font-sans">
-      <div className="container mx-auto max-w-5xl">
+    <div className="min-h-screen bg-[#fcfbf9] pt-24 pb-12 px-4">
+      <div className="max-w-5xl mx-auto grid lg:grid-cols-3 gap-8">
         
-        {/* --- HEADER SECTION --- */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-          className="flex justify-between items-end mb-12"
-        >
-          <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-[#d4af37] mb-2 block">Welcome Back</span>
-            <h1 className="text-4xl md:text-5xl font-serif font-bold text-zinc-900">
-              {user?.user_metadata?.full_name || "Guest"}
-            </h1>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-red-500 transition-colors"
-          >
-            <LogOut size={14} /> Sign Out
-          </button>
-        </motion.div>
-
-        {/* --- TOGGLE CONTENT --- */}
-        <AnimatePresence mode="wait">
-          
-          {/* VIEW 1: SIMPLE PROFILE (Landing View) */}
-          {viewState === 'profile' && (
-            <motion.div 
-              key="profile"
-              variants={containerVar}
-              initial="hidden"
-              animate="visible"
-              exit={{ opacity: 0, y: -20 }}
-              className="grid md:grid-cols-2 gap-8"
-            >
-              {/* ID CARD */}
-              <motion.div variants={itemVar} className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-zinc-200/50 border border-zinc-100 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <User size={120} />
-                </div>
-                
-                <div className="w-20 h-20 rounded-full bg-zinc-100 flex items-center justify-center text-2xl font-serif text-zinc-400 mb-6 group-hover:scale-110 transition-transform duration-500">
-                  {user?.email?.charAt(0).toUpperCase()}
-                </div>
-                
-                <h2 className="text-2xl font-bold mb-1">Personal Info</h2>
-                <p className="text-zinc-500 text-sm mb-8">{user?.email}</p>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl">
-                    <span className="text-xs font-bold uppercase text-zinc-400">Status</span>
-                    <span className="text-xs font-bold uppercase text-[#d4af37] bg-[#d4af37]/10 px-3 py-1 rounded-full">Gold Member</span>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-zinc-50 rounded-2xl">
-                    <span className="text-xs font-bold uppercase text-zinc-400">Member Since</span>
-                    <span className="text-xs font-bold text-zinc-900">2026</span>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* ACTION CARD (The "Button" you asked for) */}
-              <motion.div variants={itemVar} className="flex flex-col gap-6">
-                
-                <div 
-                  onClick={() => setViewState('dashboard')}
-                  className="flex-1 bg-black text-white p-8 rounded-[2.5rem] shadow-2xl cursor-pointer hover:scale-[1.02] transition-transform duration-300 relative overflow-hidden group"
-                >
-                   {/* Gradient Hover Effect */}
-                   <div className="absolute inset-0 bg-gradient-to-br from-[#d4af37] to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
-                   
-                   <div className="relative z-10 h-full flex flex-col justify-between">
-                      <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center mb-4">
-                        <Settings size={20} />
-                      </div>
-                      <div>
-                        <h2 className="text-3xl font-serif font-bold mb-2">My Dashboard</h2>
-                        <p className="text-white/60 text-sm flex items-center gap-2">
-                          View Bookings & Stats <ChevronRight size={14} />
-                        </p>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="bg-white p-8 rounded-[2.5rem] border border-zinc-100 shadow-lg flex items-center justify-between">
-                   <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
-                        <Bell size={18} />
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm">Notifications</p>
-                        <p className="text-zinc-400 text-xs">2 New Offers</p>
-                      </div>
-                   </div>
-                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                </div>
-
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* VIEW 2: THE DASHBOARD (Detailed View) */}
-          {viewState === 'dashboard' && (
-            <motion.div 
-              key="dashboard"
-              initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 50 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            >
-              <button 
-                onClick={() => setViewState('profile')}
-                className="mb-8 flex items-center gap-2 text-sm font-bold text-zinc-400 hover:text-black transition-colors"
-              >
-                ← Back to Profile
-              </button>
-
-              <div className="grid lg:grid-cols-3 gap-8">
-                {/* Stats Column */}
-                <div className="space-y-6">
-                  <StatCard label="Total Stays" value={bookings.length.toString()} />
-                  <StatCard label="Reward Points" value={(bookings.length * 150).toString()} />
-                  <StatCard label="Next Trip" value={bookings.length > 0 ? "In 12 Days" : "Not Planned"} />
-                </div>
-
-                {/* Bookings Column (Wider) */}
-                <div className="lg:col-span-2 space-y-6">
-                  <h3 className="text-xl font-serif font-bold mb-4">Recent Activity</h3>
-                  {bookings.length === 0 ? (
-                    <div className="bg-white p-12 rounded-[2rem] text-center border border-zinc-100">
-                      <p className="text-zinc-400 mb-4">No bookings found.</p>
-                      <button onClick={() => navigate('/rooms')} className="text-[#d4af37] font-bold text-sm underline">Book a Stay</button>
-                    </div>
+        {/* --- LEFT: PROFILE CARD --- */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-zinc-100 text-center relative overflow-hidden">
+            {/* Avatar */}
+            <div className="relative w-32 h-32 mx-auto mb-4 group">
+               <div className="w-full h-full rounded-full overflow-hidden border-4 border-white shadow-xl bg-zinc-100">
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    bookings.map((booking) => (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                        key={booking.id} 
-                        className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
-                      >
-                         <div className="flex gap-4 items-center">
-                            <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center">
-                              <MapPin size={24} className="text-zinc-400" />
-                            </div>
-                            <div>
-                               <h4 className="font-bold text-lg">{booking.room_name}</h4>
-                               <p className="text-zinc-500 text-xs">{new Date(booking.check_in).toLocaleDateString()}</p>
-                            </div>
-                         </div>
-                         <div className="flex items-center gap-4">
-                            <span className="font-serif font-bold">₹{booking.total_price.toLocaleString()}</span>
-                            <span className="px-3 py-1 bg-green-100 text-green-600 text-[10px] font-bold uppercase rounded-full">Paid</span>
-                         </div>
-                      </motion.div>
-                    ))
+                    <div className="w-full h-full flex items-center justify-center text-zinc-300"><User size={40} /></div>
                   )}
-                </div>
-              </div>
-            </motion.div>
-          )}
+               </div>
+               <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 bg-[#d4af37] text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform">
+                  <Camera size={16} />
+               </button>
+               <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} hidden />
+            </div>
 
-        </AnimatePresence>
+            <h2 className="text-2xl font-serif font-bold">{profile.full_name || 'Guest'}</h2>
+            <p className="text-zinc-500 text-sm mb-6">{profile.email}</p>
+            
+            <button onClick={handleLogout} className="w-full py-3 border border-zinc-200 rounded-xl font-bold text-sm hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-2">
+               <LogOut size={16} /> Sign Out
+            </button>
+          </div>
+
+          {/* Notification Trigger */}
+          <button onClick={() => setShowOffers(!showOffers)} className="w-full bg-black text-white p-6 rounded-2xl flex items-center justify-between shadow-lg hover:bg-[#d4af37] transition-colors group">
+             <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center"><Bell size={20} /></div>
+                <div className="text-left">
+                   <p className="font-bold">Notifications</p>
+                   <p className="text-xs text-zinc-400 group-hover:text-black">View offers & alerts</p>
+                </div>
+             </div>
+             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          </button>
+        </div>
+
+        {/* --- RIGHT: CONTENT AREA --- */}
+        <div className="lg:col-span-2 space-y-6">
+           
+           {/* OFFERS SECTION (TOGGLE) */}
+           <AnimatePresence>
+             {showOffers && (
+               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="bg-gradient-to-r from-[#d4af37] to-[#b89628] p-8 rounded-[2rem] text-black relative mb-6">
+                     <div className="absolute top-0 right-0 p-8 opacity-10"><Tag size={100} /></div>
+                     <h3 className="text-2xl font-serif font-bold mb-2">Exclusive Member Offer</h3>
+                     <p className="mb-6 max-w-md">Get 15% off spa treatments during your next stay. Use code <span className="font-bold font-mono bg-black/10 px-2 py-1 rounded">SPA15</span></p>
+                     <button className="bg-black text-white px-6 py-2 rounded-full text-sm font-bold">Claim Now</button>
+                  </div>
+               </motion.div>
+             )}
+           </AnimatePresence>
+
+           <h3 className="text-2xl font-serif font-bold ml-2">My Bookings</h3>
+           
+           {bookings.length === 0 ? (
+             <div className="bg-white p-12 rounded-[2rem] text-center text-zinc-400 border border-zinc-100">
+                <Calendar size={40} className="mx-auto mb-4 opacity-20" />
+                <p>No bookings yet.</p>
+             </div>
+           ) : (
+             <div className="space-y-4">
+               {bookings.map(booking => (
+                 <div key={booking.id} className="bg-white p-6 rounded-3xl border border-zinc-100 shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center">
+                    <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex flex-col items-center justify-center shrink-0">
+                       <span className="text-xs font-bold text-zinc-400 uppercase">{new Date(booking.check_in).toLocaleString('default', { month: 'short' })}</span>
+                       <span className="text-2xl font-serif font-bold">{new Date(booking.check_in).getDate()}</span>
+                    </div>
+                    <div className="flex-1">
+                       <h4 className="font-bold text-lg">{booking.room_name}</h4>
+                       <div className="flex items-center gap-4 text-sm text-zinc-500 mt-1">
+                          <span className="flex items-center gap-1"><MapPin size={14} /> Room {booking.room_number}</span>
+                          <span className="flex items-center gap-1"><Star size={14} /> {booking.nights} Nights</span>
+                       </div>
+                    </div>
+                    <div className="text-right">
+                       <p className="font-bold text-xl">₹{booking.total_price.toLocaleString()}</p>
+                       <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Confirmed</span>
+                    </div>
+                 </div>
+               ))}
+             </div>
+           )}
+        </div>
 
       </div>
     </div>
   );
 };
-
-// Helper Component for Stats
-const StatCard = ({ label, value }: { label: string, value: string }) => (
-  <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-lg">
-    <p className="text-xs font-bold uppercase text-zinc-400 mb-2">{label}</p>
-    <p className="text-3xl font-serif font-bold">{value}</p>
-  </motion.div>
-);
-
 export default Profile;
