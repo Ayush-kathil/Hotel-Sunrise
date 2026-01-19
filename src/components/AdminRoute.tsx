@@ -6,62 +6,61 @@ import { toast } from 'sonner';
 
 const AdminRoute = () => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        // 1. Get current logged in user
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          setIsAdmin(false);
-          setLoading(false);
-          return;
-        }
-
-        // 2. Check their role in the DB
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error || !profile) {
-          console.error("Profile check failed", error);
-          setIsAdmin(false);
-        } else {
-          // 3. Only allow if role is explicitly 'admin'
-          setIsAdmin(profile.role === 'admin');
-        }
-
-      } catch (error) {
+    const checkAdmin = async () => {
+      // 1. Get User Session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session || !session.user || !session.user.email) {
+        console.log("No session found");
         setIsAdmin(false);
-      } finally {
-        setLoading(false);
+        return;
+      }
+
+      const userEmail = session.user.email.toLowerCase();
+      // READ FROM ENV (Make sure this matches exactly in your .env file)
+      const envAdminEmail = (import.meta.env.VITE_ADMIN_EMAIL || '').toLowerCase();
+
+      // 2. CHECK 1: Environment Variable Match (Fastest)
+      if (userEmail === envAdminEmail) {
+        console.log("Admin verified via Env Var");
+        setIsAdmin(true);
+        return;
+      }
+
+      // 3. CHECK 2: Database Role (More Secure)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile?.role === 'admin') {
+        console.log("Admin verified via DB Role");
+        setIsAdmin(true);
+      } else {
+        console.warn("User is not admin:", userEmail);
+        setIsAdmin(false);
       }
     };
 
-    checkAdminStatus();
+    checkAdmin();
   }, []);
 
-  // Loading State (Spinner while checking)
-  if (loading) {
+  if (isAdmin === null) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#f4f4f5]">
-        <Loader2 className="animate-spin text-[#d4af37] mb-4" size={40} />
-        <p className="text-zinc-500 text-sm font-medium tracking-widest uppercase">Verifying Privileges...</p>
+      <div className="h-screen w-full flex items-center justify-center bg-[#fcfbf9]">
+        <Loader2 className="animate-spin text-[#d4af37]" size={40} />
       </div>
     );
   }
 
-  // Access Denied? Kick them to home.
   if (!isAdmin) {
-    toast.error("Unauthorized Access", { description: "This area is restricted to administrators." });
+    toast.error("Access Denied", { description: "You do not have permission to view this page." });
     return <Navigate to="/" replace />;
   }
 
-  // Access Granted? Render the Admin Dashboard
   return <Outlet />;
 };
 
