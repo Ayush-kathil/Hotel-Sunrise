@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster } from 'sonner';
-import { supabase } from './supabaseClient'; // Import Supabase
+import { supabase } from './supabaseClient'; 
 
 // Pages
 import Home from './pages/Home';
@@ -15,7 +15,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Terms from './pages/Terms';
 import NotFound from './pages/NotFound';
 import BookingPage from './pages/BookingPage';
-import Profile from './pages/Profile'; // Ensure you created this from previous step
+import Profile from './pages/Profile'; 
 
 // Components
 import Navbar from './components/Navbar';
@@ -27,7 +27,10 @@ function App() {
   const location = useLocation();
   const [sessionLoading, setSessionLoading] = useState(true);
 
-  // 1. GLOBAL SESSION CHECK (Prevents Flashing)
+  // 1. CHECK IF WE ARE ON AN ADMIN PAGE (To hide Navbar)
+  const isAdminRoute = location.pathname === '/dashboard' || location.pathname.startsWith('/admin');
+
+  // 2. GLOBAL AUTH CHECK (Prevents Flashing)
   useEffect(() => {
     supabase.auth.getSession().then(() => {
        setSessionLoading(false);
@@ -40,8 +43,8 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // 3. LOADING SCREEN
   if (sessionLoading) {
-     // 2. LOADING SCREEN (Shows while checking login)
      return (
        <div className="min-h-screen bg-[#fcfbf9] flex items-center justify-center">
          <div className="flex flex-col items-center gap-4">
@@ -55,44 +58,16 @@ function App() {
   return (
     <div className="bg-[#fcfbf9] min-h-screen">
       
+      {/* GLOBAL UTILITIES */}
       <ScrollProgress />
       <ScrollToTop />
       <Toaster position="top-center" richColors /> 
 
+      {/* --- DESKTOP VIEW --- */}
       <div className="hidden md:block">
-        <Navbar />
-      </div>
+        {/* Only show Desktop Navbar if NOT on Admin Panel */}
+        {!isAdminRoute && <Navbar />}
 
-      <div className="md:hidden pb-24"> 
-        <div className="fixed top-0 w-full p-4 z-50 flex justify-center bg-white/0 backdrop-blur-[2px] pointer-events-none">
-           <span className="text-xl font-serif font-bold tracking-widest text-[#d4af37] drop-shadow-sm">SUNRISE</span>
-        </div>
-        
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            <Route path="*" element={
-              <PageWrapper>
-                 <Routes location={location}>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/rooms" element={<Rooms />} />
-                    <Route path="/booking" element={<BookingPage />} />
-                    <Route path="/dining" element={<Dining />} />
-                    <Route path="/events" element={<Events />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/dashboard" element={<AdminDashboard />} /> {/* Handle old links */}
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/terms" element={<Terms />} />
-                    <Route path="*" element={<NotFound />} />
-                 </Routes>
-              </PageWrapper>
-            } />
-          </Routes>
-        </AnimatePresence>
-      </div>
-
-      <div className="hidden md:block">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/rooms" element={<Rooms />} />
@@ -109,12 +84,47 @@ function App() {
         </Routes>
       </div>
 
-      <MobileNav />
+      {/* --- MOBILE VIEW --- */}
+      <div className="md:hidden pb-24"> 
+        {/* Only show Mobile Header if NOT on Admin Panel */}
+        {!isAdminRoute && (
+          <div className="fixed top-0 w-full p-4 z-50 flex justify-center bg-white/0 backdrop-blur-[2px] pointer-events-none">
+             <span className="text-xl font-serif font-bold tracking-widest text-[#d4af37] drop-shadow-sm">SUNRISE</span>
+          </div>
+        )}
+        
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
+            <Route path="*" element={
+              <PageWrapper>
+                 <Routes location={location}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/rooms" element={<Rooms />} />
+                    <Route path="/booking" element={<BookingPage />} />
+                    <Route path="/dining" element={<Dining />} />
+                    <Route path="/events" element={<Events />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/dashboard" element={<AdminDashboard />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/terms" element={<Terms />} />
+                    <Route path="*" element={<NotFound />} />
+                 </Routes>
+              </PageWrapper>
+            } />
+          </Routes>
+        </AnimatePresence>
+
+        {/* Only show Mobile Bottom Nav if NOT on Admin Panel */}
+        {!isAdminRoute && <MobileNav />}
+      </div>
       
     </div>
   );
 }
 
+// Mobile Page Transition Wrapper
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   <motion.div
     initial={{ x: "100%", opacity: 0 }}
