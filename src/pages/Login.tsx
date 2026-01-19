@@ -2,214 +2,244 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, ArrowRight, UserPlus, XCircle, Chrome } from 'lucide-react'; // Added Chrome icon for Google
 import { toast } from 'sonner';
+import { Mail, Lock, ArrowRight, Loader2, ShieldCheck, KeyRound } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const fromRoom = location.state?.room; // Remember where they came from
+
+  // --- STATE ---
+  const [mode, setMode] = useState<'otp' | 'password'>('otp'); // 'otp' = Guest, 'password' = Admin
+  const [step, setStep] = useState<'email' | 'verify'>('email'); // For OTP flow
   const [loading, setLoading] = useState(false);
-  const [showErrorCard, setShowErrorCard] = useState(false);
   
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    fullName: ''
-  });
+  // Data
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState(''); // For Admin
+  const [otp, setOtp] = useState(''); // For Guest
 
-  // Where to go after login?
-  const savedRoom = location.state?.room;
+  // --- 1. HANDLE GUEST LOGIN (OTP) ---
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // 1. GOOGLE LOGIN HANDLER
-  const handleGoogleLogin = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          // This redirects them back to your site after Google login
-          redirectTo: window.location.origin + (savedRoom ? '/booking' : '/profile'),
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
+      const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) throw error;
+      
+      setStep('verify'); // Move to Step 2
+      toast.success("Code sent!", { description: `Check ${email} for your access code.` });
     } catch (error: any) {
-      toast.error("Google Login Failed", { description: error.message });
+      toast.error("Error sending code", { description: error.message });
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 2. EMAIL LOGIN HANDLER
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setShowErrorCard(false);
 
     try {
-      if (isSignUp) {
-        // --- SIGN UP ---
-        const { error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: { data: { full_name: formData.fullName } }
-        });
-        if (error) throw error;
-        toast.success("Account Created!", { description: "Please check your email to verify." });
-      } else {
-        // --- SIGN IN ---
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'email',
+      });
 
-        if (error) {
-           setShowErrorCard(true); // Show Premium Error Card
-           setLoading(false);
-           return;
-        }
+      if (error) throw error;
 
-        // --- ROLE CHECK ---
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.session.user.id)
-          .single();
+      // SUCCESS
+      toast.success("Welcome back!");
+      navigate(fromRoom ? '/booking' : '/profile', { state: { room: fromRoom } });
 
-        toast.success("Welcome Back");
-        
-        if (profile?.role === 'admin') {
-           navigate('/dashboard');
-        } else if (savedRoom) {
-           navigate('/booking', { state: { room: savedRoom } });
-        } else {
-           navigate('/profile');
-        }
-      }
     } catch (error: any) {
-      toast.error("Authentication Failed", { description: error.message });
+      toast.error("Invalid Code", { description: "Please try again." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- 2. HANDLE ADMIN LOGIN (PASSWORD) ---
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Check if actually admin
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profile?.role === 'admin') {
+        toast.success("Admin Access Granted");
+        navigate('/admin');
+      } else {
+        toast.success("Welcome back");
+        navigate('/profile');
+      }
+
+    } catch (error: any) {
+      toast.error("Login Failed", { description: error.message });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fcfbf9] relative overflow-hidden px-6">
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4 relative overflow-hidden">
       
-      {/* --- LAMP / GLOW EFFECTS PRESERVED --- */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-[#d4af37]/10 rounded-full blur-[100px] animate-pulse" />
-         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-zinc-900/5 rounded-full blur-[100px]" />
-      </div>
+      {/* BACKGROUND EFFECTS */}
+      <div className="absolute top-0 left-0 w-full h-full bg-[url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-40"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-black via-black/80 to-transparent"></div>
+      <div className="absolute -top-20 -right-20 w-96 h-96 bg-[#d4af37] rounded-full blur-[120px] opacity-20 animate-pulse"></div>
 
+      {/* LOGIN CARD */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-        className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-2xl w-full max-w-md border border-white/50 relative z-10"
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden relative z-10"
       >
-        {/* Toggle Header */}
-        <div className="flex justify-center mb-8 bg-zinc-100 p-1 rounded-full w-fit mx-auto">
-           <button 
-             onClick={() => { setIsSignUp(false); setShowErrorCard(false); }}
-             className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all ${!isSignUp ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'}`}
-           >
-             Sign In
-           </button>
-           <button 
-             onClick={() => { setIsSignUp(true); setShowErrorCard(false); }}
-             className={`px-6 py-2 rounded-full text-xs font-bold uppercase transition-all ${isSignUp ? 'bg-black text-white shadow-lg' : 'text-zinc-400 hover:text-black'}`}
-           >
-             Register
-           </button>
+        
+        {/* HEADER */}
+        <div className="p-8 text-center border-b border-white/5">
+          <div className="w-16 h-16 bg-[#d4af37] rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-[0_0_30px_rgba(212,175,55,0.3)]">
+            <Lock className="text-black" size={28} />
+          </div>
+          <h1 className="text-3xl font-serif font-bold text-white mb-2">Welcome</h1>
+          <p className="text-zinc-400 text-sm">
+            {mode === 'otp' ? 'Secure passwordless access' : 'Administrative login'}
+          </p>
         </div>
 
-        <div className="text-center mb-8">
-           <h1 className="text-3xl font-serif font-bold mb-2">{isSignUp ? 'Join the Club' : 'Welcome Back'}</h1>
-           <p className="text-zinc-400 text-sm">Enter your details to access your account.</p>
+        {/* TABS */}
+        <div className="flex p-2 bg-black/20 mx-8 mt-6 rounded-xl">
+          <button 
+            onClick={() => { setMode('otp'); setStep('email'); }} 
+            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${mode === 'otp' ? 'bg-[#d4af37] text-black shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+          >
+            Guest Access
+          </button>
+          <button 
+            onClick={() => setMode('password')} 
+            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${mode === 'password' ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+          >
+            Admin Login
+          </button>
         </div>
 
-        {/* --- GOOGLE BUTTON ADDED HERE --- */}
-        <button 
-          onClick={handleGoogleLogin}
-          className="w-full py-3 mb-6 bg-white border border-zinc-200 text-zinc-700 font-bold rounded-xl hover:bg-zinc-50 transition-all flex justify-center items-center gap-2 shadow-sm"
-        >
-          <Chrome size={20} className="text-red-500" /> 
-          <span>Continue with Google</span>
-        </button>
+        {/* FORMS */}
+        <div className="p-8">
+          <AnimatePresence mode="wait">
 
-        <div className="flex items-center gap-4 mb-6">
-           <div className="h-[1px] bg-zinc-200 flex-1"></div>
-           <span className="text-xs text-zinc-400 font-bold uppercase">Or use email</span>
-           <div className="h-[1px] bg-zinc-200 flex-1"></div>
+            {/* --- GUEST OTP MODE --- */}
+            {mode === 'otp' && (
+              <motion.div 
+                key="otp" 
+                initial={{ opacity: 0, x: -20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: 20 }}
+              >
+                {step === 'email' ? (
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
+                      <input 
+                        type="email" 
+                        required
+                        placeholder="Enter your email" 
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#d4af37] transition-colors"
+                      />
+                    </div>
+                    <button disabled={loading} className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-[#d4af37] transition-colors flex items-center justify-center gap-2">
+                      {loading ? <Loader2 className="animate-spin" /> : <>Send Access Code <ArrowRight size={18} /></>}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleVerifyOtp} className="space-y-4">
+                    <div className="text-center mb-6">
+                      <p className="text-zinc-400 text-xs">Code sent to <span className="text-white">{email}</span></p>
+                      <button type="button" onClick={() => setStep('email')} className="text-[#d4af37] text-xs hover:underline">Change Email</button>
+                    </div>
+                    <div className="relative">
+                      <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="Enter 6-digit code" 
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#d4af37] transition-colors tracking-widest text-center text-lg font-bold"
+                      />
+                    </div>
+                    <button disabled={loading} className="w-full bg-[#d4af37] text-black font-bold py-4 rounded-xl hover:bg-white transition-colors flex items-center justify-center gap-2">
+                      {loading ? <Loader2 className="animate-spin" /> : <>Verify & Login <ShieldCheck size={18} /></>}
+                    </button>
+                  </form>
+                )}
+              </motion.div>
+            )}
+
+            {/* --- ADMIN PASSWORD MODE --- */}
+            {mode === 'password' && (
+              <motion.div 
+                key="password" 
+                initial={{ opacity: 0, x: 20 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <form onSubmit={handleAdminLogin} className="space-y-4">
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
+                    <input 
+                      type="email" 
+                      required
+                      placeholder="Admin Email" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-white transition-colors"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
+                    <input 
+                      type="password" 
+                      required
+                      placeholder="Password" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-white transition-colors"
+                    />
+                  </div>
+                  <button disabled={loading} className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
+                    {loading ? <Loader2 className="animate-spin" /> : <>Access Dashboard <ArrowRight size={18} /></>}
+                  </button>
+                </form>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
         </div>
 
-        <form onSubmit={handleAuth} className="space-y-4">
-           {isSignUp && (
-             <div className="relative">
-                <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
-                <input 
-                  type="text" placeholder="Full Name" required 
-                  className="w-full bg-zinc-50 border border-zinc-100 p-4 pl-12 rounded-xl outline-none focus:border-[#d4af37] transition-colors"
-                  value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})}
-                />
-             </div>
-           )}
-
-           <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
-              <input 
-                type="email" placeholder="Email Address" required 
-                className="w-full bg-zinc-50 border border-zinc-100 p-4 pl-12 rounded-xl outline-none focus:border-[#d4af37] transition-colors"
-                value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
-              />
-           </div>
-
-           <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
-              <input 
-                type="password" placeholder="Password" required 
-                className="w-full bg-zinc-50 border border-zinc-100 p-4 pl-12 rounded-xl outline-none focus:border-[#d4af37] transition-colors"
-                value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})}
-              />
-           </div>
-
-           <button disabled={loading} className="w-full py-4 bg-black text-white font-bold rounded-xl hover:bg-[#d4af37] transition-all disabled:opacity-50 flex justify-center items-center gap-2 mt-4 shadow-xl">
-              {loading ? "Processing..." : (isSignUp ? "Create Account" : "Access Account")} <ArrowRight size={16} />
-           </button>
-        </form>
-
-        {/* --- ERROR CARD (PRESERVED) --- */}
-        <AnimatePresence>
-          {showErrorCard && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-              className="absolute inset-0 bg-white/95 backdrop-blur-xl z-20 flex flex-col items-center justify-center p-8 text-center rounded-[2.5rem]"
-            >
-               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6 animate-bounce">
-                  <XCircle size={32} />
-               </div>
-               <h3 className="text-2xl font-serif font-bold text-zinc-900 mb-2">Account Not Found</h3>
-               <p className="text-zinc-500 text-sm mb-8 leading-relaxed">
-                 We couldn't find an account with these credentials.
-               </p>
-               
-               <div className="flex flex-col gap-3 w-full">
-                 <button 
-                   onClick={() => { setShowErrorCard(false); setIsSignUp(true); }}
-                   className="w-full py-4 bg-[#d4af37] text-black font-bold rounded-xl hover:bg-black hover:text-white transition-all shadow-lg"
-                 >
-                   Create New Account
-                 </button>
-                 <button 
-                   onClick={() => setShowErrorCard(false)}
-                   className="w-full py-4 bg-zinc-100 text-zinc-500 font-bold rounded-xl hover:bg-zinc-200 transition-all"
-                 >
-                   Try Again
-                 </button>
-               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* FOOTER */}
+        <div className="p-6 bg-black/20 border-t border-white/5 text-center">
+          <p className="text-zinc-600 text-xs">
+            By continuing, you agree to our Terms of Service & Privacy Policy.
+          </p>
+        </div>
 
       </motion.div>
     </div>
