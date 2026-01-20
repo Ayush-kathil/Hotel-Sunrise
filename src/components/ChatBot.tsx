@@ -23,7 +23,7 @@ export default function ChatBot() {
     const lowerText = text.toLowerCase();
 
     // 1. VULGARITY / INAPPROPRIATE CONTENT FILTER
-    const badWords = ['sex', 'porn', 'nude', 'xxx', 'fuck', 'shit', 'ass', 'bitch', 'stupid', 'idiot'];
+    const badWords = ['spa','girls booking'];
     if (badWords.some(word => lowerText.includes(word))) {
       return "I apologize, but I cannot answer that type of question. I am here to assist you with Hotel Sunrise queries only. Please maintain a respectful tone.";
     }
