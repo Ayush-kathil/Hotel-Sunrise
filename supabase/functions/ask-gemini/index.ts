@@ -6,7 +6,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // 1. Handle CORS Preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -16,25 +15,31 @@ serve(async (req) => {
     const apiKey = Deno.env.get('GEMINI_API_KEY');
     if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
 
-    // 2. System Prompt (Your Hotel Rules)
+    // SYSTEM PROMPT: STRICT HOTEL SUNRISE PERSONA
     const systemPrompt = `
-      You are the AI Concierge at 'Hotel Sunrise'.
+      You are the AI Concierge for 'Hotel Sunrise', a luxury hotel in Orai, India.
       
-      [YOUR KNOWLEDGE BASE]
-      1. Booking: "Click 'Rooms' in the nav bar, select dates, and choose a suite."
-      2. Dining: "Navigate to 'Dining' and click 'Reserve Table'."
-      3. Contact: "Visit the 'Contact' page for our phone/email."
-      4. Profile: "Click the User Icon to view bookings."
+      [YOUR MISSION]
+      Assist guests with room bookings, dining reservations, and hotel information ONLY.
+      
+      [STRICT RULES - IMPORTANT]
+      1. **DO NOT** answer general knowledge questions (e.g., "Who is the president?", "Solve this math problem").
+      2. If a user asks a non-hotel question, politely refuse: "I am designed to assist only with Hotel Sunrise services."
+      3. Never break character. You are hotel staff.
+      
+      [YOUR KNOWLEDGE]
+      - **Booking Rooms:** "Click 'Rooms' in the navigation bar to see our Garden, Deluxe, and Family suites."
+      - **Dining:** "Visit our 'Dining' page to reserve a table at The Golden Spoon."
+      - **Contact:** "Our support team is available on the 'Contact' page."
+      - **Location:** "We are located near Kalpi Stand, Orai."
 
-      [STRICT RULES]
-      - Keep answers under 3 sentences.
-      - Be polite and professional.
-      - If asked about "admin", say: "I can only assist with guest services."
-      
-      User Question: ${question}
+      [TONE]
+      Professional, warm, luxury, and concise (max 3 sentences).
+
+      User Question: "${question}"
     `;
 
-    // 3. FIX: Use the Correct Model (gemini-1.5-flash)
+    // USE STABLE MODEL (gemini-1.5-flash) to avoid Rate Limits
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -45,17 +50,14 @@ serve(async (req) => {
 
     const data = await response.json();
 
-    // 4. Handle API Errors (Like 429 Quota Exceeded)
     if (data.error) {
-      console.error("Gemini API Error:", JSON.stringify(data.error));
-      
-      // Graceful fallback message if quota is hit
+      console.error("Gemini Error:", data.error);
+      // Handle Rate Limit Gracefully
       if (data.error.code === 429) {
-        return new Response(JSON.stringify({ answer: "I am currently experiencing high traffic. Please try again in 1 minute." }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+         return new Response(JSON.stringify({ answer: "The concierge desk is currently very busy. Please try again in 1 minute." }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+         });
       }
-      
       throw new Error(data.error.message);
     }
     
@@ -66,8 +68,7 @@ serve(async (req) => {
     });
 
   } catch (error: any) {
-    console.error("Function Error:", error.message);
-    return new Response(JSON.stringify({ answer: "I am having trouble connecting. Please try again." }), {
+    return new Response(JSON.stringify({ answer: "I am having trouble connecting to the hotel network. Please try again." }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
