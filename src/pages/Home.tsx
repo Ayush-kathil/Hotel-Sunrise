@@ -1,80 +1,124 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { MapPin, ArrowRight, Play, Quote } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { MapPin, ArrowRight, Play, Quote, User, Calendar, Utensils } from 'lucide-react';
+import { supabase } from '../supabaseClient';
+import { toast } from 'sonner';
 
-// Reusable FadeIn Component
-const FadeIn = ({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 40 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, margin: "-50px" }}
-    transition={{ duration: 0.8, delay, ease: "easeOut" }}
-    className={className}
-  >
-    {children}
-  </motion.div>
-);
+// --- MOBILE HOME COMPONENT (NEW) ---
+const MobileHome = () => {
+  const navigate = useNavigate();
 
-const Home = () => {
+  const handleMeClick = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Access Restricted", { description: "Please log in to view your profile." });
+      navigate('/login');
+    } else {
+      navigate('/profile');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white pb-24 font-sans">
+      {/* Mobile Header */}
+      <div className="fixed top-0 left-0 w-full p-6 z-50 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
+        <h1 className="text-xl font-serif font-bold text-[#d4af37]">SUNRISE</h1>
+        <button onClick={handleMeClick} className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/10 active:scale-95 transition-transform">
+          <User size={18} />
+        </button>
+      </div>
+
+      {/* Hero Card */}
+      <div className="relative h-[85vh] w-full overflow-hidden rounded-b-[3rem] bg-zinc-900">
+        <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1470" className="absolute inset-0 w-full h-full object-cover opacity-60" alt="Hero" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+        
+        <div className="absolute bottom-12 left-6 right-6">
+          <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-[#d4af37] text-xs font-bold tracking-[0.2em] uppercase">Welcome Back</motion.span>
+          <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-5xl font-serif font-bold mt-2 mb-6 leading-tight">
+            Find your <br/> Sanctuary.
+          </motion.h2>
+          <Link to="/rooms">
+            <motion.button whileTap={{ scale: 0.95 }} className="w-full bg-white text-black py-4 rounded-2xl font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2">
+              Book a Stay <ArrowRight size={16} />
+            </motion.button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Quick Actions Scroll */}
+      <div className="mt-10 px-6">
+        <h3 className="text-lg font-serif mb-6 text-zinc-400">Experience</h3>
+        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 snap-x">
+          
+          <Link to="/dining" className="snap-center shrink-0 w-40 h-48 bg-zinc-900 rounded-[2rem] p-5 flex flex-col justify-between border border-white/5 relative overflow-hidden">
+             <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+             <div className="relative z-10 bg-[#d4af37] w-8 h-8 rounded-full flex items-center justify-center text-black"><Utensils size={14} /></div>
+             <span className="relative z-10 font-bold">Fine Dining</span>
+          </Link>
+
+          <Link to="/events" className="snap-center shrink-0 w-40 h-48 bg-zinc-900 rounded-[2rem] p-5 flex flex-col justify-between border border-white/5 relative overflow-hidden">
+             <img src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+             <div className="relative z-10 bg-white w-8 h-8 rounded-full flex items-center justify-center text-black"><Calendar size={14} /></div>
+             <span className="relative z-10 font-bold">Events</span>
+          </Link>
+          
+           <Link to="/contact" className="snap-center shrink-0 w-40 h-48 bg-zinc-900 rounded-[2rem] p-5 flex flex-col justify-between border border-white/5 relative overflow-hidden">
+             <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-black" />
+             <div className="relative z-10 bg-white w-8 h-8 rounded-full flex items-center justify-center text-black"><MapPin size={14} /></div>
+             <span className="relative z-10 font-bold">Locate Us</span>
+          </Link>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- DESKTOP HOME COMPONENT (YOUR ORIGINAL CODE WRAPPED) ---
+const DesktopHome = () => {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
   const yText = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
-
-  // --- 1. ARRIVAL IMAGE LOGIC ---
   const imageRef = useRef(null);
-  const { scrollYProgress: imgProgress } = useScroll({
-    target: imageRef,
-    offset: ["start end", "center center"]
-  });
+  const { scrollYProgress: imgProgress } = useScroll({ target: imageRef, offset: ["start end", "center center"] });
   const imgScale = useTransform(imgProgress, [0, 1], [0.85, 1]);
   const imgRadius = useTransform(imgProgress, [0, 1], ["60px", "0px"]);
-
-  // --- 2. APPLE-STYLE VIDEO LOGIC ---
   const videoRef = useRef(null);
-  const { scrollYProgress: videoScroll } = useScroll({
-    target: videoRef,
-    offset: ["start start", "end end"] 
-  });
-  
-  // Start small (0.7) -> End full width (1)
+  const { scrollYProgress: videoScroll } = useScroll({ target: videoRef, offset: ["start start", "end end"] });
   const scale = useTransform(videoScroll, [0, 1], [0.7, 1]);
-  // Start with rounded corners -> End square
   const borderRadius = useTransform(videoScroll, [0, 1], ["60px", "0px"]);
-  // Text fades out
   const textOpacity = useTransform(videoScroll, [0, 0.4], [1, 0]);
+
+  // Reusable FadeIn
+  const FadeIn = ({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) => (
+    <motion.div initial={{ opacity: 0, y: 40 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-50px" }} transition={{ duration: 0.8, delay, ease: "easeOut" }} className={className}>
+      {children}
+    </motion.div>
+  );
 
   return (
     <div ref={containerRef} className="w-full bg-white text-zinc-900 font-sans selection:bg-[#d4af37] selection:text-white">
-      
       {/* 1. HERO SECTION */}
       <section className="h-screen flex flex-col justify-center items-center relative overflow-hidden bg-zinc-50">
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] select-none">
            <span className="text-[20vw] font-serif font-bold">LUXURY</span>
         </div>
-
         <motion.div style={{ y: yText }} className="text-center z-10 relative px-4">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-          >
+          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}>
             <h1 className="text-6xl md:text-[9rem] font-serif leading-none tracking-tighter mb-6 text-black">
               <span className="block">HOTEL</span>
               <span className="block text-[#d4af37] drop-shadow-2xl">SUNRISE</span>
             </h1>
           </motion.div>
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}
-            className="text-zinc-500 uppercase tracking-[0.4em] text-xs md:text-sm font-bold"
-          >
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="text-zinc-500 uppercase tracking-[0.4em] text-xs md:text-sm font-bold">
             The Antigravity of Luxury
           </motion.p>
         </motion.div>
-
         <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-12 text-zinc-400 text-[10px] tracking-widest uppercase flex flex-col items-center gap-2">
-          Scroll to Explore
-          <div className="w-[1px] h-12 bg-zinc-300"></div>
+          Scroll to Explore <div className="w-[1px] h-12 bg-zinc-300"></div>
         </motion.div>
       </section>
 
@@ -90,50 +134,27 @@ const Home = () => {
         </FadeIn>
         <div className="container mx-auto px-6">
           <motion.div style={{ scale: imgScale, borderRadius: imgRadius }} className="aspect-video w-full overflow-hidden shadow-2xl relative">
-            <img src="https://images.unsplash.com/photo-1621293954908-907159247fc8?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" className="w-full h-full object-cover" alt="Grand Lobby"/>
+            <img src="https://images.unsplash.com/photo-1621293954908-907159247fc8?q=80&w=1470" className="w-full h-full object-cover" alt="Grand Lobby"/>
           </motion.div>
         </div>
       </section>
 
-      {/* 3. VIDEO SCROLL SECTION (Apple Style) */}
-      {/* Changed background to bg-zinc-50 (White Theme) */}
+      {/* 3. VIDEO SCROLL SECTION */}
       <section ref={videoRef} className="h-[300vh] relative bg-zinc-50">
-        
-        {/* Sticky Wrapper */}
         <div className="sticky top-0 h-screen overflow-hidden flex items-center justify-center">
-          
-          {/* The Expanding Video */}
-          <motion.div 
-            style={{ scale: scale, borderRadius: borderRadius }}
-            className="w-full h-full relative z-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-4 border-white"
-          >
-             {/* NEW RELIABLE VIDEO SOURCE */}
-             <video 
-               autoPlay 
-               muted 
-               loop 
-               playsInline 
-               className="w-full h-full object-cover"
-             >
+          <motion.div style={{ scale: scale, borderRadius: borderRadius }} className="w-full h-full relative z-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-4 border-white">
+             <video autoPlay muted loop playsInline className="w-full h-full object-cover">
                 <source src="https://videos.pexels.com/video-files/7578552/7578552-uhd_2560_1440_30fps.mp4" type="video/mp4" />
              </video>
-             
-             {/* Dark Overlay for Text Readability */}
              <div className="absolute inset-0 bg-black/20" />
           </motion.div>
-
-          {/* Text Overlay */}
-          <motion.div 
-             style={{ opacity: textOpacity }}
-             className="absolute z-10 text-center text-white pointer-events-none mix-blend-difference"
-          >
+          <motion.div style={{ opacity: textOpacity }} className="absolute z-10 text-center text-white pointer-events-none mix-blend-difference">
              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center mx-auto mb-8 border border-white/30">
                <Play className="ml-1 fill-white w-8 h-8" />
              </div>
              <h2 className="text-7xl font-serif mb-4 drop-shadow-lg">Cinematic Life</h2>
              <p className="text-lg text-white/90 uppercase tracking-widest font-bold">Experience the unseen</p>
           </motion.div>
-
         </div>
       </section>
 
@@ -179,26 +200,32 @@ const Home = () => {
           </motion.div>
         </div>
       </section>
-
-      {/* FOOTER - Replace the existing footer at the bottom of Home.tsx with this */}
-       <footer className="bg-white text-zinc-900 py-20 px-6 text-center border-t border-zinc-100 relative z-10">
-       <h2 className="text-4xl font-serif mb-8 text-[#d4af37]">SUNRISE</h2>
-  
-       <div className="flex flex-wrap justify-center gap-8 text-xs text-zinc-500 mb-12 uppercase tracking-widest font-bold">
-       <Link to="/rooms" className="hover:text-black transition-colors">Rooms</Link>
-       <Link to="/dining" className="hover:text-black transition-colors">Dining</Link>
-       <Link to="/events" className="hover:text-black transition-colors">Events</Link>
-       <Link to="/contact" className="hover:text-black transition-colors">Contact</Link>
-       {/* NEW LINK HERE */}
-       <Link to="/terms" className="hover:text-[#d4af37] transition-colors">Terms & Conditions</Link>
-       </div>
-  
-       <p className="text-zinc-300 text-[10px] font-medium">
-       © 2026 Hotel Sunrise. All rights reserved.
-       </p>
-       </footer>
+      
+      <footer className="bg-white text-zinc-900 py-20 px-6 text-center border-t border-zinc-100 relative z-10">
+        <h2 className="text-4xl font-serif mb-8 text-[#d4af37]">SUNRISE</h2>
+        <div className="flex flex-wrap justify-center gap-8 text-xs text-zinc-500 mb-12 uppercase tracking-widest font-bold">
+           <Link to="/rooms" className="hover:text-black transition-colors">Rooms</Link>
+           <Link to="/dining" className="hover:text-black transition-colors">Dining</Link>
+           <Link to="/events" className="hover:text-black transition-colors">Events</Link>
+           <Link to="/contact" className="hover:text-black transition-colors">Contact</Link>
+        </div>
+        <p className="text-zinc-300 text-[10px] font-medium">© 2026 Hotel Sunrise. All rights reserved.</p>
+      </footer>
     </div>
   );
+};
+
+// --- MAIN HOME WRAPPER ---
+const Home = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile ? <MobileHome /> : <DesktopHome />;
 };
 
 export default Home;

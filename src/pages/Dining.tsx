@@ -1,83 +1,100 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { supabase } from '../supabaseClient';
-import { Utensils, Clock, MapPin, Star, Calendar } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { Loader2, ArrowRight } from 'lucide-react';
 
 const Dining = () => {
-  const [menu, setMenu] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  // Optional: Fetch menu items from Supabase if you have a table, else use static
+  const [menuItems, setMenuItems] = useState([
+    { id: 1, title: 'Royal Thali', desc: 'A curated selection of 56 Rajasthani delicacies.', price: '₹1,200', img: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?q=80' },
+    { id: 2, title: 'Truffle Risotto', desc: 'Imported black truffle shavings over aged arborio rice.', price: '₹950', img: 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?q=80' },
+    { id: 3, title: 'Saffron Milk Cake', desc: 'Dense milk fudge infused with Kashmiri saffron.', price: '₹400', img: 'https://images.unsplash.com/photo-1517244683847-7454b94e1b71?q=80' }
+  ]);
 
-  // If you have a menu table, fetch it here. Otherwise static is fine.
+  // Parallax Header
+  const headerRef = useRef(null);
+  const { scrollYProgress } = useScroll({ target: headerRef, offset: ["start start", "end start"] });
+  const yBg = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const textY = useTransform(scrollYProgress, [0, 1], ["0%", "150%"]);
+
   useEffect(() => {
-     // Mock data or fetch from Supabase
-     setMenu([
-        { id: 1, name: "Royal Thali", price: 1200, desc: "Authentic Rajasthani platter", tag: "Bestseller" },
-        { id: 2, name: "Truffle Pasta", price: 850, desc: "Handmade pasta with black truffle", tag: "Chef's Choice" },
-        { id: 3, name: "Saffron Risotto", price: 950, desc: "Creamy risotto with Kashmiri saffron", tag: "New" },
-        { id: 4, name: "Grilled Salmon", price: 1500, desc: "Atlantic salmon with asparagus", tag: "" },
-     ]);
+    // Simulate loading for premium feel
+    setTimeout(() => setLoading(false), 1000);
   }, []);
 
   return (
-    // 'min-h-screen' ensures full height, 'pb-20' makes room for footer/mobile nav
-    <div className="min-h-screen bg-[#fcfbf9] font-sans text-zinc-900 pb-20 pt-20">
+    <div className="bg-[#0a0a0a] text-white font-sans min-h-screen">
       
-      {/* HEADER */}
-      <div className="px-6 mb-12 text-center max-w-2xl mx-auto">
-         <span className="text-[#d4af37] font-bold tracking-widest uppercase text-xs mb-2 block">Fine Dining</span>
-         <h1 className="text-4xl md:text-5xl font-serif font-bold mb-4">The Golden Spoon</h1>
-         <p className="text-zinc-500 leading-relaxed">Experience a culinary journey with ingredients sourced from our organic gardens and spices from the ancient trade routes.</p>
-      </div>
+      {/* 1. HERO HEADER */}
+      <section ref={headerRef} className="h-screen relative overflow-hidden flex items-center justify-center">
+        <motion.div style={{ y: yBg }} className="absolute inset-0 z-0">
+           <img src="https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=1974" className="w-full h-full object-cover opacity-60" alt="Dining" />
+           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-[#0a0a0a]" />
+        </motion.div>
 
-      {/* INFO CARDS (Horizontal Scroll on Mobile) */}
-      <div className="flex gap-4 overflow-x-auto px-6 mb-12 no-scrollbar snap-x">
-         <div className="snap-center shrink-0 w-64 p-6 bg-white rounded-2xl shadow-sm border border-zinc-100">
-            <Clock className="text-[#d4af37] mb-3" />
-            <h3 className="font-bold">Opening Hours</h3>
-            <p className="text-sm text-zinc-500">Breakfast: 7am - 11am</p>
-            <p className="text-sm text-zinc-500">Dinner: 7pm - 11pm</p>
-         </div>
-         <div className="snap-center shrink-0 w-64 p-6 bg-white rounded-2xl shadow-sm border border-zinc-100">
-            <MapPin className="text-[#d4af37] mb-3" />
-            <h3 className="font-bold">Location</h3>
-            <p className="text-sm text-zinc-500">Rooftop Level 5</p>
-            <p className="text-sm text-zinc-500">Lake View Terrace</p>
-         </div>
-         <div className="snap-center shrink-0 w-64 p-6 bg-black text-white rounded-2xl shadow-xl">
-            <Calendar className="text-[#d4af37] mb-3" />
-            <h3 className="font-bold">Reservations</h3>
-            <p className="text-sm text-zinc-400 mb-4">Book a table in advance.</p>
-            <button className="bg-[#d4af37] text-black text-xs font-bold px-4 py-2 rounded-full w-full">Reserve Now</button>
-         </div>
-      </div>
+        <motion.div style={{ y: textY }} className="relative z-10 text-center px-4">
+           <motion.span initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="block text-[#d4af37] text-xs font-bold tracking-[0.4em] uppercase mb-4">Culinary Art</motion.span>
+           <motion.h1 initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1 }} className="text-6xl md:text-8xl font-serif font-bold mb-6">
+             The Golden <br/> Spoon
+           </motion.h1>
+           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="text-zinc-400 max-w-md mx-auto leading-relaxed">
+             Where ancient recipes meet modern gastronomy. Experience the finest dining in Orai.
+           </motion.p>
+        </motion.div>
+      </section>
 
-      {/* MENU GRID */}
-      <div className="px-4 max-w-5xl mx-auto">
-         <h2 className="text-2xl font-serif font-bold mb-6 px-2">Signature Menu</h2>
-         <div className="grid md:grid-cols-2 gap-4">
-            {menu.map((item, i) => (
-               <motion.div 
-                 initial={{ opacity: 0, y: 20 }}
-                 whileInView={{ opacity: 1, y: 0 }}
-                 viewport={{ once: true }}
-                 transition={{ delay: i * 0.1 }}
-                 key={item.id} 
-                 className="bg-white p-5 rounded-2xl border border-zinc-100 shadow-sm flex justify-between items-center group hover:border-[#d4af37]/30 transition-all"
-               >
-                  <div>
-                     <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-lg">{item.name}</h3>
-                        {item.tag && <span className="text-[10px] bg-black text-white px-2 py-0.5 rounded-full uppercase font-bold">{item.tag}</span>}
-                     </div>
-                     <p className="text-sm text-zinc-500">{item.desc}</p>
+      {/* 2. MENU SHOWCASE */}
+      <section className="py-24 px-4 max-w-7xl mx-auto">
+        <h2 className="text-3xl font-serif text-center mb-16">Signature Selection</h2>
+        
+        {loading ? (
+          <div className="flex justify-center h-40 items-center text-[#d4af37]"><Loader2 className="animate-spin" /></div>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-8">
+             {menuItems.map((item, index) => (
+                <motion.div 
+                  key={item.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.2 }}
+                  className="group relative h-[400px] overflow-hidden rounded-[2rem] border border-white/10"
+                >
+                  <img src={item.img} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={item.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+                  
+                  <div className="absolute bottom-0 left-0 w-full p-8">
+                    <div className="flex justify-between items-end mb-2">
+                       <h3 className="text-2xl font-serif">{item.title}</h3>
+                       <span className="text-[#d4af37] font-bold text-lg">{item.price}</span>
+                    </div>
+                    <p className="text-zinc-400 text-sm line-clamp-2">{item.desc}</p>
                   </div>
-                  <div className="text-right">
-                     <span className="block font-serif font-bold text-lg text-[#d4af37]">₹{item.price}</span>
-                     <button className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 group-hover:text-black transition-colors">Add</button>
-                  </div>
-               </motion.div>
-            ))}
+                </motion.div>
+             ))}
+          </div>
+        )}
+      </section>
+
+      {/* 3. RESERVATION CTA */}
+      <section className="py-32 px-6 text-center">
+         <div className="max-w-3xl mx-auto bg-[#d4af37] text-black rounded-[3rem] p-12 md:p-20 relative overflow-hidden">
+            <div className="relative z-10">
+              <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6">Reserve Your Table</h2>
+              <p className="text-black/70 mb-8 max-w-lg mx-auto">Due to high demand, we recommend booking at least 24 hours in advance.</p>
+              <button 
+                onClick={() => toast.success("Reservation Request Sent", { description: "Our concierge will call you shortly." })}
+                className="bg-black text-white px-8 py-4 rounded-full font-bold uppercase tracking-widest hover:scale-105 transition-transform"
+              >
+                Book Now
+              </button>
+            </div>
+            {/* Decorative pattern */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
          </div>
-      </div>
+      </section>
 
     </div>
   );
