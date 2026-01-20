@@ -19,6 +19,42 @@ export default function ChatBot() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  const processLocalResponse = (text: string): string | null => {
+    const lowerText = text.toLowerCase();
+
+    // 1. VULGARITY / INAPPROPRIATE CONTENT FILTER
+    const badWords = ['sex', 'porn', 'nude', 'xxx', 'fuck', 'shit', 'ass', 'bitch', 'stupid', 'idiot'];
+    if (badWords.some(word => lowerText.includes(word))) {
+      return "I apologize, but I cannot answer that type of question. I am here to assist you with Hotel Sunrise queries only. Please maintain a respectful tone.";
+    }
+
+    // 2. ROUTE GUIDANCE
+    // Cancellation
+    if (lowerText.includes('cancel') || lowerText.includes('refund')) {
+      return "To cancel a booking, please navigate to your Profile (top right icon) > 'My Bookings'. Select the active booking you wish to cancel. Note that cancellations within 24 hours of check-in may be non-refundable.";
+    }
+    
+    // Booking
+    if (lowerText.includes('book') || lowerText.includes('reservation') || lowerText.includes('room') || lowerText.includes('price')) {
+      return "You can book a stay by clicking 'Rooms' in the navigation menu. We offer Garden, Deluxe, and Family suites. Simply select your dates to see real-time availability and pricing.";
+    }
+
+    // Contact
+    if (lowerText.includes('contact') || lowerText.includes('call') || lowerText.includes('phone') || lowerText.includes('email') || lowerText.includes('support')) {
+      return "You can reach our 24/7 concierge team via the 'Contact' page. Alternatively, call us at +1 (555) 012-3456 or email concierge@hotelsunrise.com.";
+    }
+
+    // Location / Address
+    if (lowerText.includes('where') || lowerText.includes('location') || lowerText.includes('address') || lowerText.includes('map')) {
+      return "Hotel Sunrise is located at 123 Ocean Drive, Paradise City. You can view our exact location on the 'Contact' page map.";
+    }
+
+    // 3. SCOPE ENFORCEMENT (General Fallback for obviously unrelated things could go here, but strict keyword matching is risky. 
+    // We will let the AI handle nuanced "out of scope" questions, but we can catch obvious ones if needed.)
+    
+    return null; // No local match, proceed to AI
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -28,16 +64,32 @@ export default function ChatBot() {
     setQuery('');
     setLoading(true);
 
-    const { data, error } = await supabase.functions.invoke('ask-gemini', {
-      body: { question: userText }
-    });
+    // 1. Try Local Response First
+    const localReply = processLocalResponse(userText);
+    if (localReply) {
+      // Simulate a small delay for natural feel
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { role: 'bot', text: localReply }]);
+        setLoading(false);
+      }, 600);
+      return;
+    }
 
-    setLoading(false);
+    // 2. Fallback to AI
+    try {
+      const { data, error } = await supabase.functions.invoke('ask-gemini', {
+        body: { question: userText }
+      });
 
-    if (error || !data) {
-      setMessages((prev) => [...prev, { role: 'bot', text: "I apologize, the concierge desk is currently busy." }]);
-    } else {
+      if (error || !data) {
+        throw new Error("API Error");
+      }
+      
       setMessages((prev) => [...prev, { role: 'bot', text: data.answer }]);
+    } catch (err) {
+      setMessages((prev) => [...prev, { role: 'bot', text: "I apologize, I am having trouble connecting to the server at the moment. Please try again later." }]);
+    } finally {
+      setLoading(false);
     }
   };
 
