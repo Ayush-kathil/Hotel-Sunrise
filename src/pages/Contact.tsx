@@ -129,7 +129,14 @@ const ContactCard = ({ icon: Icon, title, value }: any) => (
   </div>
 );
 
-const InputGroup = ({ label, type = "text", value, onChange }: any) => (
+interface InputGroupProps {
+  label: string;
+  type?: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const InputGroup = ({ label, type = "text", value, onChange }: InputGroupProps) => (
   <div className="space-y-2">
     <label className="text-xs font-bold text-[#d4af37] uppercase tracking-wider ml-1">{label}</label>
     <input 
