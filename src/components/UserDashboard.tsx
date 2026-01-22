@@ -111,14 +111,14 @@ const Dashboard = () => {
           {/* Sidebar Card */}
           <motion.div 
             initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-            className="bg-white p-8 rounded-[2rem] shadow-xl shadow-zinc-200/50 border border-zinc-100 h-fit"
+            className="glass-black p-8 rounded-[2rem] h-fit"
           >
             <div className="flex flex-col items-center text-center">
-              <div className="w-24 h-24 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-400 mb-6 text-2xl font-serif font-bold">
+              <div className="w-24 h-24 bg-zinc-800 rounded-full flex items-center justify-center text-[#d4af37] mb-6 text-2xl font-serif font-bold border border-[#d4af37]/20">
                  {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
               </div>
-              <h2 className="text-xl font-bold mb-1">{fullName || 'Guest User'}</h2>
-              <span className="px-3 py-1 bg-[#d4af37]/10 text-[#d4af37] text-[10px] font-bold uppercase tracking-widest rounded-full">
+              <h2 className="text-xl font-bold mb-1 text-white">{fullName || 'Guest User'}</h2>
+              <span className="px-3 py-1 bg-[#d4af37]/10 text-[#d4af37] text-[10px] font-bold uppercase tracking-widest rounded-full border border-[#d4af37]/20">
                 Gold Member
               </span>
             </div>
@@ -129,37 +129,37 @@ const Dashboard = () => {
              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
              className="lg:col-span-2"
           >
-            <form onSubmit={handleSave} className="bg-white p-10 rounded-[2rem] shadow-xl shadow-zinc-200/50 border border-zinc-100 space-y-8">
+            <form onSubmit={handleSave} className="glass-black p-10 rounded-[2rem] space-y-8">
               
-              <h3 className="text-xl font-serif font-bold border-b border-zinc-100 pb-4 mb-6">Personal Details</h3>
+              <h3 className="text-xl font-serif font-bold border-b border-white/10 pb-4 mb-6 text-white">Personal Details</h3>
 
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider pl-2 flex items-center gap-2">
+                   <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider pl-2 flex items-center gap-2">
                      <User size={14} /> Full Name
                    </label>
                    <input 
                      type="text" 
                      value={fullName}
                      onChange={(e) => setFullName(e.target.value)}
-                     className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition-all" 
+                     className="w-full bg-zinc-900/50 border border-white/10 p-4 rounded-xl outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition-all text-white placeholder-zinc-700" 
                    />
                 </div>
 
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider pl-2 flex items-center gap-2">
+                   <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider pl-2 flex items-center gap-2">
                      <Mail size={14} /> Email Address
                    </label>
                    <input 
                      type="email" 
                      value={email}
                      disabled
-                     className="w-full bg-zinc-100 border border-zinc-200 p-4 rounded-xl outline-none text-zinc-500 cursor-not-allowed" 
+                     className="w-full bg-zinc-900/30 border border-white/5 p-4 rounded-xl outline-none text-zinc-500 cursor-not-allowed" 
                    />
                 </div>
 
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider pl-2 flex items-center gap-2">
+                   <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider pl-2 flex items-center gap-2">
                      <Phone size={14} /> Mobile Number
                    </label>
                    <input 
@@ -167,30 +167,30 @@ const Dashboard = () => {
                      value={mobile}
                      onChange={(e) => setMobile(e.target.value)}
                      placeholder="+91 000 000 0000"
-                     className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition-all" 
+                     className="w-full bg-zinc-900/50 border border-white/10 p-4 rounded-xl outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition-all text-white placeholder-zinc-700" 
                    />
                 </div>
 
                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider pl-2 flex items-center gap-2">
+                   <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider pl-2 flex items-center gap-2">
                      <MapPin size={14} /> Location
                    </label>
                    <input 
                      type="text" 
                      disabled
                      placeholder="India"
-                     className="w-full bg-zinc-50 border border-zinc-200 p-4 rounded-xl outline-none" 
+                     className="w-full bg-zinc-900/50 border border-white/10 p-4 rounded-xl outline-none text-zinc-400" 
                    />
                 </div>
               </div>
 
               <div className="pt-6 flex items-center justify-between">
-                 <div className="flex items-center gap-2 text-zinc-400 text-xs">
+                 <div className="flex items-center gap-2 text-zinc-500 text-xs">
                     <ShieldCheck size={14} /> Data is encrypted
                  </div>
                  <button 
                    disabled={saving}
-                   className="px-8 py-4 bg-black text-white font-bold rounded-xl hover:bg-[#d4af37] transition-all flex items-center gap-3 disabled:opacity-70"
+                   className="px-8 py-4 bg-[#d4af37] text-black font-bold rounded-xl hover:bg-white transition-all flex items-center gap-3 disabled:opacity-70 shadow-lg"
                  >
                    {saving ? 'Saving...' : 'Save & Continue'} <Save size={18} />
                  </button>

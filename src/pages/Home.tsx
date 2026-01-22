@@ -74,20 +74,23 @@ const HomeMobile = () => {
 
       {/* 3. Featured Experience */}
       <section className="px-6 mb-12">
-         <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-zinc-100">
-            <div className="flex justify-between items-start mb-4">
-               <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">Must Try</span>
-                  <h3 className="text-2xl font-serif font-bold mt-1">Royal Dining</h3>
-               </div>
-               <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center">
-                  <Star size={18} className="text-[#d4af37]" fill="#d4af37" />
-               </div>
+         <div className="glass-black p-6 rounded-[2rem] relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-700" />
+            <div className="relative z-10">
+                <div className="flex justify-between items-start mb-4">
+                <div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">Must Try</span>
+                    <h3 className="text-2xl font-serif font-bold mt-1 text-white">Royal Dining</h3>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-[#d4af37]/20 flex items-center justify-center border border-[#d4af37]/50">
+                    <Star size={18} className="text-[#d4af37]" fill="#d4af37" />
+                </div>
+                </div>
+                <p className="text-zinc-400 text-sm mb-6 leading-relaxed">Experience our Michelin-starred chef's tasting menu on the rooftop terrace.</p>
+                <Link to="/dining" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:gap-4 transition-all text-white/90">
+                View Menu <ArrowRight size={14} className="text-[#d4af37]" />
+                </Link>
             </div>
-            <p className="text-zinc-500 text-sm mb-6 leading-relaxed">Experience our Michelin-starred chef's tasting menu on the rooftop terrace.</p>
-            <Link to="/dining" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:gap-4 transition-all">
-               View Menu <ArrowRight size={14} />
-            </Link>
          </div>
       </section>
 

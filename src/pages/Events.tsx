@@ -205,21 +205,21 @@ const VenueInfoCard = ({ venue, index, setActiveVenue, onBook }: any) => {
         </p>
 
         <div className="grid grid-cols-2 gap-4 max-w-md">
-            <div className="p-4 rounded-2xl bg-white border border-zinc-100 shadow-sm">
+            <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-sm">
                 <Users size={20} className="text-[#d4af37] mb-2" />
-                <div className="text-sm text-zinc-400 uppercase text-[10px] font-bold tracking-wider">Capacity</div>
-                <div className="text-zinc-900 font-medium">{venue.capacity}</div>
+                <div className="text-sm text-zinc-500 uppercase text-[10px] font-bold tracking-wider">Capacity</div>
+                <div className="text-white font-medium">{venue.capacity}</div>
             </div>
-            <div className="p-4 rounded-2xl bg-white border border-zinc-100 shadow-sm">
+            <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-sm">
                 <MapPin size={20} className="text-[#d4af37] mb-2" />
-                <div className="text-sm text-zinc-400 uppercase text-[10px] font-bold tracking-wider">Location</div>
-                <div className="text-zinc-900 font-medium">Main Wing</div>
+                <div className="text-sm text-zinc-500 uppercase text-[10px] font-bold tracking-wider">Location</div>
+                <div className="text-white font-medium">Main Wing</div>
             </div>
         </div>
 
         <div className="flex flex-wrap gap-3 max-w-md">
             {venue.features.map((feat: string, i: number) => (
-                <span key={i} className="px-3 py-1.5 rounded-full border border-zinc-200 bg-white text-xs text-zinc-600 flex items-center gap-2 font-bold uppercase tracking-wider shadow-sm">
+                <span key={i} className="px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs text-zinc-300 flex items-center gap-2 font-bold uppercase tracking-wider shadow-sm">
                     <CheckCircle size={10} className="text-[#d4af37]" /> {feat}
                 </span>
             ))}
@@ -303,11 +303,11 @@ const InquiryModal = ({ show, onClose }: { show: boolean, onClose: () => void })
              animate={{ scale: 1, y: 0, opacity: 1 }} 
              exit={{ scale: 0.9, y: 20, opacity: 0 }}
              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-             className="bg-white border border-zinc-200 w-full max-w-lg rounded-[2rem] overflow-hidden relative z-10 shadow-2xl"
+             className="glass-black w-full max-w-lg rounded-[2rem] overflow-hidden relative z-10"
            >
-              <div className="flex justify-between items-center p-6 border-b border-zinc-100 bg-zinc-50">
-                  <h3 className="text-xl font-serif font-bold text-zinc-900">Event Inquiry</h3>
-                  <button onClick={onClose} className="p-2 bg-white border border-zinc-200 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-black transition-colors">
+              <div className="flex justify-between items-center p-6 border-b border-white/10 bg-white/5">
+                  <h3 className="text-xl font-serif font-bold text-white">Event Inquiry</h3>
+                  <button onClick={onClose} className="p-2 bg-transparent border border-white/20 rounded-full hover:bg-white/10 text-white transition-colors">
                       <X size={18} />
                   </button>
               </div>
@@ -316,9 +316,9 @@ const InquiryModal = ({ show, onClose }: { show: boolean, onClose: () => void })
                   <form onSubmit={handleSubmit} className="space-y-5">
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5 local-light-form">
-                            <label className="text-xs uppercase font-bold text-zinc-400 pl-1">Event Type</label>
+                            <label className="text-xs uppercase font-bold text-zinc-500 pl-1">Event Type</label>
                             <select 
-                              className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none appearance-none font-medium"
+                              className="w-full bg-zinc-900 border border-zinc-800 text-white p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none appearance-none font-medium"
                               value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}
                             >
                                 <option>Wedding</option>
@@ -327,30 +327,30 @@ const InquiryModal = ({ show, onClose }: { show: boolean, onClose: () => void })
                             </select>
                         </div>
                         <div className="space-y-1.5">
-                             <label className="text-xs uppercase font-bold text-zinc-400 pl-1">Guests</label>
-                             <input type="number" required className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none font-medium" 
+                             <label className="text-xs uppercase font-bold text-zinc-500 pl-1">Guests</label>
+                             <input type="number" required className="w-full bg-zinc-900 border border-zinc-800 text-white p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none font-medium" 
                                value={formData.guests} onChange={e => setFormData({...formData, guests: Number(e.target.value)})} 
                              />
                         </div>
                      </div>
 
                      <div className="space-y-1.5">
-                        <label className="text-xs uppercase font-bold text-zinc-400 pl-1">Preferred Date</label>
-                        <input type="date" required className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none font-medium text-zinc-500" 
+                        <label className="text-xs uppercase font-bold text-zinc-500 pl-1">Preferred Date</label>
+                        <input type="date" required className="w-full bg-zinc-900 border border-zinc-800 text-white p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none font-medium text-zinc-400" 
                           value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} 
                         />
                      </div>
 
                      <div className="space-y-4 pt-2">
-                        <input type="text" placeholder="Your Name" required className="w-full bg-transparent border-b border-zinc-200 text-zinc-900 p-3 focus:border-[#d4af37] outline-none transition-colors placeholder:text-zinc-400" 
+                        <input type="text" placeholder="Your Name" required className="w-full bg-transparent border-b border-zinc-800 text-white p-3 focus:border-[#d4af37] outline-none transition-colors placeholder:text-zinc-600" 
                            value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
                         />
-                        <input type="email" placeholder="Email Address" required className="w-full bg-transparent border-b border-zinc-200 text-zinc-900 p-3 focus:border-[#d4af37] outline-none transition-colors placeholder:text-zinc-400" 
+                        <input type="email" placeholder="Email Address" required className="w-full bg-transparent border-b border-zinc-800 text-white p-3 focus:border-[#d4af37] outline-none transition-colors placeholder:text-zinc-600" 
                            value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
                         />
                      </div>
 
-                     <button disabled={loading} className="w-full bg-[#d4af37] text-black font-bold py-4 rounded-xl mt-4 hover:bg-black hover:text-white transition-colors flex justify-center gap-2 items-center shadow-lg">
+                     <button disabled={loading} className="w-full bg-[#d4af37] text-black font-bold py-4 rounded-xl mt-4 hover:bg-white hover:text-black transition-colors flex justify-center gap-2 items-center shadow-lg">
                         {loading ? <span className="animate-pulse">Processing...</span> : <><Calendar size={18} /> Request Proposal</>}
                      </button>
                   </form>

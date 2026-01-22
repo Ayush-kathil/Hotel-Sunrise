@@ -60,11 +60,23 @@ function App() {
   }
 
   return (
-    <div className="bg-[#fcfbf9] min-h-screen">
+    <div className="bg-[#fcfbf9] min-h-screen relative">
+      <div className="grain-overlay"></div>
       <ScrollProgress />
       <SmoothScroll />
       <ScrollToTop />
-      <Toaster position="top-center" richColors /> 
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          classNames: {
+            toast: "bg-black/90 backdrop-blur-xl border border-[#d4af37]/30 text-white shadow-2xl rounded-xl p-4 gap-4",
+            title: "text-[#d4af37] font-serif font-bold tracking-widest uppercase text-xs",
+            description: "text-zinc-300 text-sm font-light",
+            actionButton: "bg-[#d4af37] text-black font-bold uppercase tracking-widest text-[10px] px-3 py-2 rounded-lg hover:bg-white transition-colors",
+            cancelButton: "bg-zinc-800 text-white font-bold uppercase tracking-widest text-[10px] px-3 py-2 rounded-lg hover:bg-zinc-700 transition-colors",
+          }
+        }}
+      /> 
 
       {/* --- DESKTOP VIEW --- */}
       <div className="hidden md:block">

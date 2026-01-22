@@ -203,52 +203,52 @@ const BookingModal = ({ show, onClose }: { show: boolean, onClose: () => void })
   return (
     <AnimatePresence>
       {show && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-md" onClick={onClose}>
           <motion.div 
              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
              onClick={e => e.stopPropagation()}
-             className="bg-[#fcfbf9] w-full md:max-w-lg md:rounded-[2.5rem] rounded-t-[2.5rem] shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto"
+             className="glass-black w-full md:max-w-lg md:rounded-[2.5rem] rounded-t-[2.5rem] shadow-2xl overflow-hidden relative max-h-[90vh] overflow-y-auto border border-white/10"
           >
              <div className="p-8">
-                <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-8 md:hidden" />
+                <div className="w-12 h-1.5 bg-zinc-800 rounded-full mx-auto mb-8 md:hidden" />
                 
-                <h3 className="text-3xl font-serif font-bold text-center mb-2">Secure Your Table</h3>
-                <p className="text-zinc-500 text-center mb-8 text-sm">Join us for an unforgettable evening.</p>
+                <h3 className="text-3xl font-serif font-bold text-center mb-2 text-white">Secure Your Table</h3>
+                <p className="text-zinc-400 text-center mb-8 text-sm">Join us for an unforgettable evening.</p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white p-3 rounded-2xl border border-zinc-100 focus-within:border-orange-400 transition-colors">
-                         <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Name</label>
-                         <input required type="text" placeholder="John Doe" className="w-full bg-transparent outline-none font-medium" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                      <div className="bg-zinc-900/50 p-3 rounded-2xl border border-white/5 focus-within:border-[#d4af37] transition-colors">
+                         <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Name</label>
+                         <input required type="text" placeholder="John Doe" className="w-full bg-transparent outline-none font-medium text-white placeholder-zinc-700" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                       </div>
-                      <div className="bg-white p-3 rounded-2xl border border-zinc-100 focus-within:border-orange-400 transition-colors">
-                         <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Guests</label>
-                         <select className="w-full bg-transparent outline-none font-medium" value={formData.guests} onChange={e => setFormData({...formData, guests: Number(e.target.value)})}>
+                      <div className="bg-zinc-900/50 p-3 rounded-2xl border border-white/5 focus-within:border-[#d4af37] transition-colors">
+                         <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Guests</label>
+                         <select className="w-full bg-transparent outline-none font-medium text-white [&>option]:text-black" value={formData.guests} onChange={e => setFormData({...formData, guests: Number(e.target.value)})}>
                             {[1,2,3,4,5,6,8,10].map(n => <option key={n} value={n}>{n} Guests</option>)}
                          </select>
                       </div>
                    </div>
                    
-                   <div className="bg-white p-3 rounded-2xl border border-zinc-100 focus-within:border-orange-400 transition-colors">
-                      <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Email</label>
-                      <input required type="email" placeholder="john@example.com" className="w-full bg-transparent outline-none font-medium" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                   <div className="bg-zinc-900/50 p-3 rounded-2xl border border-white/5 focus-within:border-[#d4af37] transition-colors">
+                      <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Email</label>
+                      <input required type="email" placeholder="john@example.com" className="w-full bg-transparent outline-none font-medium text-white placeholder-zinc-700" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                    </div>
 
                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-white p-3 rounded-2xl border border-zinc-100 focus-within:border-orange-400 transition-colors">
-                         <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Date</label>
-                         <input required type="date" min={today} className="w-full bg-transparent outline-none font-medium text-sm" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                      <div className="bg-zinc-900/50 p-3 rounded-2xl border border-white/5 focus-within:border-[#d4af37] transition-colors">
+                         <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Date</label>
+                         <input required type="date" min={today} className="w-full bg-transparent outline-none font-medium text-sm text-white [color-scheme:dark]" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
                       </div>
-                      <div className="bg-white p-3 rounded-2xl border border-zinc-100 focus-within:border-orange-400 transition-colors">
-                         <label className="text-[10px] font-bold text-zinc-400 uppercase block mb-1">Time</label>
-                         <input required type="time" className="w-full bg-transparent outline-none font-medium text-sm" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
+                      <div className="bg-zinc-900/50 p-3 rounded-2xl border border-white/5 focus-within:border-[#d4af37] transition-colors">
+                         <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Time</label>
+                         <input required type="time" className="w-full bg-transparent outline-none font-medium text-sm text-white [color-scheme:dark]" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
                       </div>
                    </div>
 
-                   <button disabled={loading} className="w-full py-5 bg-[#0a0a0a] text-white font-bold rounded-2xl shadow-lg mt-6 active:scale-95 transition-all">
+                   <button disabled={loading} className="w-full py-5 bg-[#d4af37] text-black font-bold rounded-2xl shadow-lg mt-6 active:scale-95 transition-all hover:bg-white">
                       {loading ? "Confirming..." : "Confirm Booking"}
                    </button>
-                   <p className="text-center text-xs text-zinc-400 mt-4 pb-4">No payment required for reservation.</p>
+                   <p className="text-center text-xs text-zinc-500 mt-4 pb-4">No payment required for reservation.</p>
                 </form>
              </div>
           </motion.div>
