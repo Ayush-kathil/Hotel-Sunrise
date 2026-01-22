@@ -55,12 +55,32 @@ serve(async (req: Request) => {
     `;
 
     // 4. Send the Email
+    // 4. Send Email 1: To Guest
     await transporter.sendMail({
-      from: '"Hotel Sunrise" <kathilshiva@gmail.com>', // Sender
-      to: email, // Receiver (The Guest)
-      cc: 'kathilshiva@gmail.com', // Admin Notification
+      from: '"Hotel Sunrise" <kathilshiva@gmail.com>',
+      to: email, // Guest Only
       subject: `Booking Confirmed: Room #${room_number}`,
       html: htmlContent,
+    });
+
+    // 5. Send Email 2: To Admin (Alert)
+    await transporter.sendMail({
+      from: '"Sunrise System" <kathilshiva@gmail.com>',
+      to: "kathilshiva@gmail.com", // Admin Only
+      subject: `[New Booking] ${name} - Room ${room_number}`,
+      html: `
+        <div style="font-family: monospace; padding: 20px; background: #f0f0f0;">
+          <h2>New Reservation Received</h2>
+          <ul>
+            <li><strong>Guest Name:</strong> ${name}</li>
+            <li><strong>Email:</strong> ${email}</li>
+            <li><strong>Room:</strong> #${room_number} (${room_name})</li>
+            <li><strong>Dates:</strong> ${dates}</li>
+            <li><strong>Price:</strong> ₹${price}</li>
+            <li><strong>Booking ID:</strong> ${booking_id}</li>
+          </ul>
+        </div>
+      `,
     });
 
     console.log(`Email sent to ${email}`);
