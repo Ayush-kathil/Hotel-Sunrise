@@ -66,7 +66,24 @@ const BookingPage = () => {
          return; 
       }
 
-      // 2. Insert Booking
+      // 2. Ensure Profile Exists (Fix for FK Error)
+      // Sometimes triggers fail or don't exist, so we ensure the profile row exists before referencing it.
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          // Only update basic info if creating/updating
+          full_name: guestName || 'Guest',
+          // email: user.email // optional, depends on schema
+        }, { onConflict: 'id' })
+        .select();
+
+      if (profileError) {
+         console.warn("Profile Upsert Warning:", profileError);
+         // We continue, hoping the row exists or error is RLS related but row is there.
+      }
+
+      // 3. Insert Booking
       const { data: savedBooking, error: dbError } = await supabase
         .from('bookings')
         .insert([{
