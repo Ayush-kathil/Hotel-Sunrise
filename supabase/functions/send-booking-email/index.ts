@@ -63,22 +63,22 @@ serve(async (req: Request) => {
       html: htmlContent,
     });
 
-    // 5. Send Email 2: To Admin (Alert)
+    // 5. Send Email 2: To Admin (SMART DATA STYLE)
     await transporter.sendMail({
       from: '"Sunrise System" <kathilshiva@gmail.com>',
-      to: "kathilshiva@gmail.com", // Admin Only
-      subject: `[New Booking] ${name} - Room ${room_number}`,
+      to: "kathilshiva@gmail.com", 
+      subject: `[BOOKING] ${name} - Room ${room_number}`,
       html: `
-        <div style="font-family: monospace; padding: 20px; background: #f0f0f0;">
-          <h2>New Reservation Received</h2>
-          <ul>
-            <li><strong>Guest Name:</strong> ${name}</li>
-            <li><strong>Email:</strong> ${email}</li>
-            <li><strong>Room:</strong> #${room_number} (${room_name})</li>
-            <li><strong>Dates:</strong> ${dates}</li>
-            <li><strong>Price:</strong> ₹${price}</li>
-            <li><strong>Booking ID:</strong> ${booking_id}</li>
-          </ul>
+        <div style="font-family: monospace; padding: 20px; background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 5px;">
+          <h2 style="color: #389e0d; margin-top: 0;">✅ New Reservation</h2>
+           <table style="width: 100%; text-align: left; border-collapse: collapse;">
+             <tr><td style="padding: 5px; border-bottom: 1px solid #d9f7be;"><strong>Guest:</strong></td><td style="padding: 5px; border-bottom: 1px solid #d9f7be;">${name}</td></tr>
+             <tr><td style="padding: 5px; border-bottom: 1px solid #d9f7be;"><strong>Email:</strong></td><td style="padding: 5px; border-bottom: 1px solid #d9f7be;">${email}</td></tr>
+             <tr><td style="padding: 5px; border-bottom: 1px solid #d9f7be;"><strong>Room:</strong></td><td style="padding: 5px; border-bottom: 1px solid #d9f7be;">#${room_number} (${room_name})</td></tr>
+             <tr><td style="padding: 5px; border-bottom: 1px solid #d9f7be;"><strong>Dates:</strong></td><td style="padding: 5px; border-bottom: 1px solid #d9f7be;">${dates}</td></tr>
+             <tr><td style="padding: 5px; border-bottom: 1px solid #d9f7be;"><strong>Price:</strong></td><td style="padding: 5px; border-bottom: 1px solid #d9f7be;">₹${price}</td></tr>
+           </table>
+           <p style="margin-top: 15px; font-weight: bold; color: #389e0d;">Status: Confirmed & Paid.</p>
         </div>
       `,
     });

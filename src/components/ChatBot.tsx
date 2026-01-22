@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { MessageSquare, X, Send, Sparkles, Loader2, User, Bot, HelpCircle, Utensils, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -40,6 +41,8 @@ export default function ChatBot() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  const navigate = useNavigate(); // Hook for navigation
+
   const handleSend = async (e: React.FormEvent, overrideText?: string) => {
     e.preventDefault();
     const textToSend = overrideText || query;
@@ -49,6 +52,37 @@ export default function ChatBot() {
     setQuery('');
     setLoading(true);
 
+    // --- SMART NAVIGATION LOGIC ---
+    const lowerText = textToSend.toLowerCase();
+    let autoReply = "";
+
+    if (lowerText.includes("book") || lowerText.includes("room") || lowerText.includes("reservation")) {
+       autoReply = "I can certainly help you with that. Navigating you to our **Rooms & Suites** page to view availability.";
+       setTimeout(() => { navigate('/rooms'); setIsOpen(false); }, 2000);
+    } 
+    else if (lowerText.includes("dining") || lowerText.includes("food") || lowerText.includes("restaurant")) {
+       autoReply = "Excellent choice. Taking you to our **Dining** options where you can explore our culinary offerings.";
+       setTimeout(() => { navigate('/dining'); setIsOpen(false); }, 2000);
+    }
+    else if (lowerText.includes("contact") || lowerText.includes("help") || lowerText.includes("support")) {
+       autoReply = "Connecting you with our support team. Opening the **Contact** page now.";
+       setTimeout(() => { navigate('/contact'); setIsOpen(false); }, 2000);
+    }
+    else if (lowerText.includes("login") || lowerText.includes("sign in")) {
+       autoReply = "Securely redirecting you to the **Login** portal.";
+       setTimeout(() => { navigate('/login'); setIsOpen(false); }, 1500);
+    }
+
+    if (autoReply) {
+       // If keyword matched, reply locally and skip API
+       setTimeout(() => {
+         setMessages((prev) => [...prev, { role: 'bot', text: autoReply }]);
+         setLoading(false);
+       }, 600);
+       return;
+    }
+
+    // --- FALLBACK TO GEMINI ---
     try {
       const { data, error } = await supabase.functions.invoke('ask-gemini', {
         body: { question: textToSend }
