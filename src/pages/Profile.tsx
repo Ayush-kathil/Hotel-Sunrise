@@ -61,16 +61,32 @@ const Profile = () => {
   };
 
   // --- CANCEL BOOKING (NEW) ---
-  const handleCancelBooking = async (bookingId: string, roomNumber: number) => {
+  const handleCancelBooking = async (booking: any) => {
     if (!confirm("Are you sure you want to cancel this reservation? This cannot be undone.")) return;
 
     try {
-      const { error } = await supabase.from('bookings').delete().eq('id', bookingId);
+      toast.info("Processing cancellation...");
+
+      // 1. Send Email Notification via Edge Function
+      const { error: fnError } = await supabase.functions.invoke('cancel-booking', {
+        body: {
+          email: profile.email,
+          name: profile.full_name || 'Guest',
+          booking_id: booking.id,
+          room_name: booking.room_name,
+          refund_amount: booking.total_price // Simplified refund logic
+        }
+      });
+
+      if (fnError) console.error("Email notification failed:", fnError);
+
+      // 2. Delete from Database
+      const { error } = await supabase.from('bookings').delete().eq('id', booking.id);
       if (error) throw error;
 
-      toast.success("Booking Cancelled", { description: `Room #${roomNumber} is now free.` });
+      toast.success("Booking Cancelled", { description: `Room #${booking.room_number} is now free.` });
       // Update UI immediately
-      setBookings(bookings.filter(b => b.id !== bookingId));
+      setBookings(bookings.filter(b => b.id !== booking.id));
 
     } catch (error: any) {
       toast.error("Cancellation Failed", { description: error.message });
@@ -99,8 +115,8 @@ const Profile = () => {
                     <div className="w-full h-full flex items-center justify-center text-zinc-300"><User size={40} /></div>
                   )}
                </div>
-               <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 bg-[#d4af37] text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform">
-                  <Camera size={16} />
+               <button disabled={uploading} onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 bg-[#d4af37] text-white p-2 rounded-full shadow-lg hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
+                  {uploading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Camera size={16} />}
                </button>
                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} hidden />
             </div>
@@ -170,7 +186,7 @@ const Profile = () => {
                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Confirmed</span>
                        
                        <button 
-                         onClick={() => handleCancelBooking(booking.id, booking.room_number)}
+                         onClick={() => handleCancelBooking(booking)}
                          className="flex items-center gap-1 text-red-500 text-[10px] font-bold hover:bg-red-50 px-2 py-1 rounded-lg transition-colors border border-red-100 mt-1"
                        >
                          <Trash2 size={12} /> Cancel

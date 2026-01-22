@@ -22,6 +22,7 @@ import Navbar from './components/Navbar';
 import MobileNav from './components/MobileNav';
 import ScrollToTop from './components/ScrollToTop';
 import ScrollProgress from './components/ScrollProgress';
+import SmoothScroll from './components/SmoothScroll';
 import AdminRoute from './components/AdminRoute';
 import ChatBot from './components/ChatBot'; // <--- IMPORT CHATBOT
 
@@ -61,6 +62,7 @@ function App() {
   return (
     <div className="bg-[#fcfbf9] min-h-screen">
       <ScrollProgress />
+      <SmoothScroll />
       <ScrollToTop />
       <Toaster position="top-center" richColors /> 
 

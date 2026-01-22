@@ -4,14 +4,13 @@ import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Lock, ArrowRight, Loader2, ShieldCheck, Chrome } from 'lucide-react';
-import { Turnstile } from '@marsidev/react-turnstile'; // <--- NEW IMPORT
+import { Turnstile } from '@marsidev/react-turnstile';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromRoom = location.state?.room;
 
-  // STATES
   const [mode, setMode] = useState<'otp' | 'password'>('otp');
   const [step, setStep] = useState<'email' | 'verify'>('email');
   const [loading, setLoading] = useState(false);
@@ -19,11 +18,9 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   
-  // CAPTCHA TOKEN STORAGE
   const captchaTokenRef = useRef<string | null>(null);
   const turnstileRef = useRef<any>(null);
 
-  // --- GOOGLE LOGIN (SOCIAL) ---
   const handleGoogleLogin = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -36,13 +33,9 @@ const Login = () => {
     }
   };
 
-  // --- OTP LOGIC WITH CLOUDFLARE ---
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // 1. CHECK TOKEN
     const token = captchaTokenRef.current;
-    
     if (!token) {
       toast.error("Please wait for the captcha to verify.");
       return;
@@ -52,20 +45,15 @@ const Login = () => {
     try {
       const { error } = await supabase.auth.signInWithOtp({ 
         email, 
-        options: { 
-          shouldCreateUser: true,
-          captchaToken: token // <--- PASS CLOUDFLARE TOKEN HERE
-        } 
+        options: { shouldCreateUser: true, captchaToken: token } 
       });
       
       if (error) throw error;
-      
       setStep('verify');
       toast.success("Code sent!", { description: `Check ${email}` });
       
     } catch (error: any) {
       toast.error("Error", { description: error.message });
-      // Reset Captcha on error so user can try again
       turnstileRef.current?.reset(); 
       captchaTokenRef.current = null;
     } finally {
@@ -88,7 +76,6 @@ const Login = () => {
     }
   };
 
-  // --- ADMIN LOGIN ---
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -121,7 +108,8 @@ const Login = () => {
           <h1 className="text-3xl font-serif font-bold text-white mb-2">Welcome</h1>
           <p className="text-zinc-400 text-sm mb-6">Sign in to access your account</p>
           
-          <button onClick={handleGoogleLogin} className="w-full bg-white text-black font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-zinc-200 transition-colors mb-6">
+          {/* FIX: Added type="button" */}
+          <button type="button" onClick={handleGoogleLogin} className="w-full bg-white text-black font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-zinc-200 transition-colors mb-6">
             <Chrome size={20} /> Continue with Google
           </button>
 
@@ -133,8 +121,9 @@ const Login = () => {
 
         {/* TOGGLE */}
         <div className="flex bg-black/30 mx-8 p-1 rounded-xl mb-6">
-           <button onClick={() => { setMode('otp'); setStep('email'); }} className={`flex-1 py-2 text-xs font-bold uppercase rounded-lg transition-all ${mode === 'otp' ? 'bg-[#d4af37] text-black' : 'text-zinc-500 hover:text-white'}`}>Guest</button>
-           <button onClick={() => setMode('password')} className={`flex-1 py-2 text-xs font-bold uppercase rounded-lg transition-all ${mode === 'password' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Admin</button>
+           {/* FIX: Added type="button" */}
+           <button type="button" onClick={() => { setMode('otp'); setStep('email'); }} className={`flex-1 py-2 text-xs font-bold uppercase rounded-lg transition-all ${mode === 'otp' ? 'bg-[#d4af37] text-black' : 'text-zinc-500 hover:text-white'}`}>Guest</button>
+           <button type="button" onClick={() => setMode('password')} className={`flex-1 py-2 text-xs font-bold uppercase rounded-lg transition-all ${mode === 'password' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Admin</button>
         </div>
 
         <div className="px-8 pb-8">
@@ -142,29 +131,22 @@ const Login = () => {
             {mode === 'otp' ? (
               <motion.form key="otp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onSubmit={step === 'email' ? handleSendOtp : handleVerifyOtp} className="space-y-4">
                  {step === 'email' ? (
-                    <>
-                      <input type="email" required placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white focus:border-[#d4af37] outline-none" />
-                      
-                      {/* CLOUDFLARE TURNSTILE WIDGET */}
-                      <div className="flex justify-center py-2 h-[65px]">
-                        <Turnstile
-                          ref={turnstileRef}
-                          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                          onSuccess={(token) => {
-                            console.log("Captcha Solved:", token);
-                            captchaTokenRef.current = token;
-                          }}
-                          options={{
-                            theme: 'dark',
-                            size: 'normal',
-                          }}
-                        />
-                      </div>
-                    </>
+                   <>
+                     <input type="email" required placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white focus:border-[#d4af37] outline-none" />
+                     <div className="flex justify-center py-2 h-[65px]">
+                       <Turnstile
+                         ref={turnstileRef}
+                         siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                         onSuccess={(token) => { captchaTokenRef.current = token; }}
+                         options={{ theme: 'dark', size: 'normal' }}
+                       />
+                     </div>
+                   </>
                  ) : (
                     <input type="text" required placeholder="Enter Code" value={otp} onChange={e => setOtp(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white text-center tracking-widest font-bold focus:border-[#d4af37] outline-none" />
                  )}
-                 <button disabled={loading} className="w-full bg-[#d4af37] text-black font-bold py-4 rounded-xl hover:bg-white transition-colors flex items-center justify-center gap-2">
+                 {/* FIX: Added type="submit" */}
+                 <button type="submit" disabled={loading} className="w-full bg-[#d4af37] text-black font-bold py-4 rounded-xl hover:bg-white transition-colors flex items-center justify-center gap-2">
                     {loading ? <Loader2 className="animate-spin" /> : step === 'email' ? <>Send Code <ArrowRight size={18} /></> : <>Verify <ShieldCheck size={18} /></>}
                  </button>
               </motion.form>
@@ -172,7 +154,8 @@ const Login = () => {
               <motion.form key="pass" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onSubmit={handleAdminLogin} className="space-y-4">
                  <input type="email" required placeholder="Admin Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white outline-none" />
                  <input type="password" required placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-4 text-white outline-none" />
-                 <button disabled={loading} className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
+                 {/* FIX: Added type="submit" */}
+                 <button type="submit" disabled={loading} className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
                     {loading ? <Loader2 className="animate-spin" /> : <>Login <ArrowRight size={18} /></>}
                  </button>
               </motion.form>
