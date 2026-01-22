@@ -1,7 +1,7 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { MapPin, ArrowRight, Play, Quote } from 'lucide-react';
+import { MapPin, ArrowRight, Play, Quote, Star } from 'lucide-react';
 
 const FadeIn = ({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) => (
   <motion.div
@@ -16,6 +16,100 @@ const FadeIn = ({ children, delay = 0, className = "" }: { children: React.React
 );
 
 const Home = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+     const handleResize = () => setIsMobile(window.innerWidth < 768);
+     window.addEventListener('resize', handleResize);
+     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile ? <HomeMobile /> : <HomeDesktop />;
+};
+
+// --- MOBILE HOME (NEW) ---
+const HomeMobile = () => {
+  return (
+    <div className="bg-[#fcfbf9] min-h-screen font-sans text-zinc-900 pb-20">
+      
+      {/* 1. Full Screen Mobile Hero */}
+      <section className="relative h-[85vh] w-full overflow-hidden rounded-b-[3rem] shadow-2xl">
+         <div className="absolute inset-0">
+            <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=3540&auto=format&fit=crop" className="w-full h-full object-cover" alt="Luxury Hotel" />
+         </div>
+         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+         
+         <div className="absolute bottom-0 left-0 w-full p-8 pb-12 text-white">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+               <span className="inline-block px-3 py-1 bg-[#d4af37] text-black text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">5 Star Luxury</span>
+               <h1 className="text-5xl font-serif font-bold leading-none mb-2">Hotel <br/> Sunrise</h1>
+               <p className="text-white/80 text-lg font-light mb-6">The Antigravity of Luxury</p>
+               
+               <Link to="/booking" className="flex items-center gap-3 bg-white text-black px-6 py-4 rounded-full font-bold w-full justify-center active:scale-95 transition-transform">
+                  Book Your Stay <ArrowRight size={18} />
+               </Link>
+            </motion.div>
+         </div>
+      </section>
+
+      {/* 2. Quick Access Cards */}
+      <section className="py-10 px-6">
+         <h2 className="text-2xl font-serif font-bold mb-6">Explore</h2>
+         <div className="flex gap-4 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden -mx-6 px-6 snap-x">
+             {[
+               { title: "Rooms", img: "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=3540", link: "/rooms" },
+               { title: "Dining", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=3540", link: "/dining" },
+               { title: "Events", img: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=3540", link: "/events" },
+             ].map((item, i) => (
+                <Link key={i} to={item.link} className="snap-center shrink-0 w-64 h-80 rounded-[2rem] overflow-hidden relative shadow-lg group">
+                   <img src={item.img} className="w-full h-full object-cover" alt={item.title} />
+                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
+                   <div className="absolute bottom-6 left-6 text-white">
+                      <h3 className="text-2xl font-serif font-bold">{item.title}</h3>
+                      <div className="w-8 h-1 bg-[#d4af37] mt-2" />
+                   </div>
+                </Link>
+             ))}
+         </div>
+      </section>
+
+      {/* 3. Featured Experience */}
+      <section className="px-6 mb-12">
+         <div className="bg-white p-6 rounded-[2rem] shadow-xl border border-zinc-100">
+            <div className="flex justify-between items-start mb-4">
+               <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">Must Try</span>
+                  <h3 className="text-2xl font-serif font-bold mt-1">Royal Dining</h3>
+               </div>
+               <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center">
+                  <Star size={18} className="text-[#d4af37]" fill="#d4af37" />
+               </div>
+            </div>
+            <p className="text-zinc-500 text-sm mb-6 leading-relaxed">Experience our Michelin-starred chef's tasting menu on the rooftop terrace.</p>
+            <Link to="/dining" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:gap-4 transition-all">
+               View Menu <ArrowRight size={14} />
+            </Link>
+         </div>
+      </section>
+
+      {/* 4. Map / Location */}
+      <section className="px-6 pb-12">
+         <div className="h-48 rounded-[2rem] overflow-hidden relative shadow-lg">
+            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3559.0123456789!2d79.4500!3d25.9900!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39987979264426b3%3A0xc3f8e815668b422!2sOrai%2C%20Uttar%20Pradesh" className="w-full h-full border-0 filter grayscale invert opacity-80" loading="lazy"></iframe>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+               <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                  <MapPin size={14} /> <span className="text-xs font-bold">Orai, UP</span>
+               </div>
+            </div>
+         </div>
+      </section>
+
+    </div>
+  );
+};
+
+
+// --- DESKTOP HOME (EXISTING) ---
+const HomeDesktop = () => {
   const containerRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
   const yText = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);

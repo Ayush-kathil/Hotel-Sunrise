@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowDown, Users, Star, CheckCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, useScroll, useTransform, AnimatePresence, useSpring } from 'framer-motion';
+import { ArrowRight, Users, CheckCircle, Calendar, X, Sparkles, MapPin } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { toast } from 'sonner';
 
@@ -11,6 +11,7 @@ const venues = [
     title: "The Grand Ballroom",
     subtitle: "Royal Elegance",
     capacity: "500 Guests",
+    price: "From $5,000",
     desc: "A masterpiece of architectural design featuring Austrian crystal chandeliers, soaring 24-foot ceilings, and a private bridal suite. The perfect stage for your fairytale ending.",
     img: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=2098&auto=format&fit=crop",
     features: ["Private Bridal Suite", "State-of-the-art AV", "24ft Ceilings"]
@@ -20,6 +21,7 @@ const venues = [
     title: "Oceanview Terrace",
     subtitle: "Al Fresco Luxury",
     capacity: "150 Guests",
+    price: "From $3,500",
     desc: "Where the horizon meets luxury. An open-air sanctuary designed for golden-hour cocktails and romantic ceremonies under a canopy of stars.",
     img: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?q=80&w=2070&auto=format&fit=crop",
     features: ["Panoramic Views", "Fire Pits", "Private Bar"]
@@ -29,206 +31,334 @@ const venues = [
     title: "The Executive Loft",
     subtitle: "Corporate Focus",
     capacity: "40 Guests",
+    price: "From $1,200",
     desc: "High stakes require high focus. A soundproofed haven equipped with cutting-edge telepresence technology and ergonomic Herman Miller seating.",
     img: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?q=80&w=2069&auto=format&fit=crop",
     features: ["Telepresence Tech", "Butler Service", "Acoustic Treatment"]
   }
 ];
 
-// --- ANIMATION VARIANTS (Apple Style) ---
-const blurReveal = {
-  hidden: { opacity: 0, filter: "blur(10px)", y: 20 },
-  visible: { 
-    opacity: 1, 
-    filter: "blur(0px)", 
-    y: 0,
-    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] }
-  }
+const Events = () => {
+  const [activeVenue, setActiveVenue] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const containerRef = useRef(null);
+
+  // Smooth scroll progress for the whole page
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+
+  return (
+    <div ref={containerRef} className="bg-[#fcfbf9] min-h-screen font-sans text-zinc-900 selection:bg-[#d4af37] selection:text-white">
+      
+      {/* 1. CINEMATIC HERO */}
+      <HeroSection onBook={() => setShowModal(true)} />
+
+      {/* 2. IMMERSIVE SCROLL SHOWCASE */}
+      <section className="relative w-full">
+        {/* Mobile: Standard Stack / Desktop: Sticky Layout */}
+        <div className="flex flex-col lg:flex-row">
+          
+          {/* LEFT: SCROLLING CONTENT (Desktop) */}
+          <div className="w-full lg:w-[45%] relative z-10 bg-[#fcfbf9]/80 backdrop-blur-sm lg:bg-transparent">
+            <div className="lg:h-[20vh]" /> {/* Spacer */}
+            {venues.map((venue, index) => (
+              <VenueInfoCard 
+                key={venue.id} 
+                venue={venue} 
+                index={index} 
+                setActiveVenue={setActiveVenue} 
+                onBook={() => setShowModal(true)}
+              />
+            ))}
+            <div className="lg:h-[20vh]" /> {/* Spacer */}
+          </div>
+
+          {/* RIGHT: STICKY IMAGE CANVAS (Desktop Only) */}
+          <div className="hidden lg:block w-[55%] h-screen sticky top-0 right-0 overflow-hidden">
+             {/* Background noise texture for premium feel */}
+             <div className="absolute inset-0 z-20 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+             
+             <AnimatePresence mode="popLayout">
+                <motion.div
+                  key={activeVenue}
+                  initial={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, scale: 1, filter: "blur(10px)" }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute inset-0 w-full h-full"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/10 to-transparent z-10" />
+                  <img 
+                    src={venues[activeVenue].img} 
+                    alt="Venue Background" 
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
+             </AnimatePresence>
+
+             {/* Floating Indicator */}
+             <div className="absolute bottom-10 right-10 z-30 flex gap-2">
+                {venues.map((_, idx) => (
+                  <motion.div 
+                    key={idx}
+                    animate={{ 
+                      width: activeVenue === idx ? 32 : 8,
+                      backgroundColor: activeVenue === idx ? "#d4af37" : "rgba(255,255,255,0.5)"
+                    }}
+                    className="h-2 rounded-full box-border border border-white/20 shadow-sm"
+                  />
+                ))}
+             </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 3. CALL TO ACTION FOOTER */}
+      <Footer onBook={() => setShowModal(true)} />
+
+      {/* 4. SUPABASE FORM MODAL */}
+      <InquiryModal show={showModal} onClose={() => setShowModal(false)} />
+    </div>
+  );
 };
 
-const Events = () => {
-  const [activeCard, setActiveCard] = useState(0);
-  const heroRef = useRef(null);
+// --- COMPONENT: HERO ---
+const HeroSection = ({ onBook }: { onBook: () => void }) => {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"]
+  });
 
-  // Parallax Hero
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.9]);
 
-  // Form State
+  return (
+    <section ref={ref} className="h-screen relative overflow-hidden flex items-center justify-center bg-zinc-50">
+      <motion.div style={{ scale, opacity: useTransform(scrollYProgress, [0, 1], [1, 0.5]) }} className="absolute inset-0 z-0">
+         <img 
+           src="https://novoxinc.com/cdn/shop/articles/novox_7_event_setup_styles_for_hotel_and_mice_hero_image_1024x576px_1024x.jpg?v=1657957442" 
+           className="w-full h-full object-cover opacity-90 grayscale-[20%]"
+           alt="Hero"
+         />
+         <div className="absolute inset-0 bg-black/20" />
+      </motion.div>
+
+      <motion.div style={{ y, opacity }} className="relative z-10 text-center px-6 max-w-4xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 50 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="bg-white/60 backdrop-blur-sm p-12 rounded-[3rem] border border-white/40 shadow-xl"
+        >
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-900/10 bg-white/50 backdrop-blur-md text-xs font-medium text-[#d4af37] tracking-wider uppercase mb-6">
+            <Sparkles size={12} /> The 2026 Collection
+          </span>
+          <h1 className="text-6xl md:text-8xl font-serif font-medium tracking-tighter text-zinc-900 mb-6 drop-shadow-sm">
+            Moments, <br/> <span className="text-zinc-500 italic">Elevated.</span>
+          </h1>
+          <p className="text-lg md:text-xl text-zinc-700 font-light max-w-2xl mx-auto mb-10 leading-relaxed">
+            Discover a curated selection of spaces where architecture meets emotion. 
+            Designed for those who seek the extraordinary.
+          </p>
+          <button onClick={onBook} className="group relative inline-flex items-center gap-3 px-8 py-4 bg-black text-white rounded-full text-sm font-bold tracking-wide overflow-hidden transition-all hover:bg-[#d4af37] border border-transparent shadow-lg hover:shadow-xl hover:scale-105">
+            <span className="relative z-10">Start Planning</span>
+            <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+};
+
+// --- COMPONENT: VENUE CARD (Scroll Trigger) ---
+const VenueInfoCard = ({ venue, index, setActiveVenue, onBook }: any) => {
+  return (
+    <motion.div 
+      onViewportEnter={() => setActiveVenue(index)}
+      viewport={{ amount: 0.6, margin: "0px 0px -20% 0px" }}
+      className="min-h-screen flex flex-col justify-center p-6 md:p-12 lg:pl-20 border-l border-zinc-200 lg:border-none"
+    >
+      {/* Mobile Image (Visible only on small screens) */}
+      <div className="lg:hidden w-full aspect-[4/3] mb-8 rounded-3xl overflow-hidden relative shadow-2xl">
+        <img src={venue.img} className="w-full h-full object-cover" alt={venue.title} />
+      </div>
+
+      <div className="space-y-8 relative">
+        <div className="flex items-center gap-4 text-[#d4af37]">
+          <span className="text-sm font-bold tracking-widest uppercase">{venue.subtitle}</span>
+          <div className="h-[1px] w-12 bg-[#d4af37]/50" />
+        </div>
+        
+        <h2 className="text-4xl md:text-6xl font-serif font-medium text-zinc-900 leading-[1.1] tracking-tight">
+          {venue.title}
+        </h2>
+
+        <p className="text-zinc-500 text-lg leading-relaxed max-w-md font-light border-l-2 border-zinc-200 pl-6">
+          {venue.desc}
+        </p>
+
+        <div className="grid grid-cols-2 gap-4 max-w-md">
+            <div className="p-4 rounded-2xl bg-white border border-zinc-100 shadow-sm">
+                <Users size={20} className="text-[#d4af37] mb-2" />
+                <div className="text-sm text-zinc-400 uppercase text-[10px] font-bold tracking-wider">Capacity</div>
+                <div className="text-zinc-900 font-medium">{venue.capacity}</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white border border-zinc-100 shadow-sm">
+                <MapPin size={20} className="text-[#d4af37] mb-2" />
+                <div className="text-sm text-zinc-400 uppercase text-[10px] font-bold tracking-wider">Location</div>
+                <div className="text-zinc-900 font-medium">Main Wing</div>
+            </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 max-w-md">
+            {venue.features.map((feat: string, i: number) => (
+                <span key={i} className="px-3 py-1.5 rounded-full border border-zinc-200 bg-white text-xs text-zinc-600 flex items-center gap-2 font-bold uppercase tracking-wider shadow-sm">
+                    <CheckCircle size={10} className="text-[#d4af37]" /> {feat}
+                </span>
+            ))}
+        </div>
+
+        <button 
+          onClick={onBook}
+          className="mt-8 text-black hover:text-[#d4af37] transition-colors text-sm font-bold uppercase tracking-widest border-b border-zinc-900/20 pb-1 hover:border-[#d4af37]"
+        >
+            Check Availability
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+// --- COMPONENT: FOOTER ---
+const Footer = ({ onBook }: any) => (
+  <section className="relative py-32 bg-zinc-900 flex flex-col items-center justify-center text-center overflow-hidden text-white">
+     <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+     
+     <motion.div 
+       initial={{ opacity: 0, scale: 0.9 }}
+       whileInView={{ opacity: 1, scale: 1 }}
+       transition={{ duration: 0.8 }}
+       className="relative z-10 px-6"
+     >
+        <h2 className="text-5xl md:text-8xl font-serif font-medium mb-6 tracking-tighter">
+            Make it <span className="text-[#d4af37]">yours.</span>
+        </h2>
+        <p className="text-zinc-400 text-lg max-w-xl mx-auto mb-12 font-light">
+            Our team of event specialists is ready to transform your vision into an unforgettable reality.
+        </p>
+        <button 
+           onClick={onBook}
+           className="bg-[#d4af37] text-black px-12 py-5 rounded-full font-bold text-lg hover:bg-white hover:text-black hover:scale-105 transition-all duration-300 shadow-[0_0_50px_rgba(212,175,55,0.4)]"
+        >
+           Inquire Now
+        </button>
+     </motion.div>
+  </section>
+);
+
+// --- COMPONENT: MODAL (Supabase Connected) ---
+const InquiryModal = ({ show, onClose }: { show: boolean, onClose: () => void }) => {
   const [loading, setLoading] = useState(false);
-  const handleSubmit = (e: React.FormEvent) => {
+  const [formData, setFormData] = useState({ name: '', email: '', type: 'Wedding', guests: 100, date: '' });
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Inquiry Received", { description: "We will contact you shortly." });
-    }, 1500);
+    // Supabase Connection
+    const { error } = await supabase.from('contact_messages').insert([{
+       full_name: formData.name,
+       email: formData.email,
+       subject: `Inquiry: ${formData.type} - ${formData.date}`,
+       message: `Automated Inquiry via Events Page. Expected Guests: ${formData.guests}`
+    }]);
+
+    if (error) {
+      toast.error("Submission Failed", { description: error.message });
+    } else {
+      toast.success("Request Received", { description: "Our concierge will contact you shortly." });
+      onClose();
+      setFormData({ name: '', email: '', type: 'Wedding', guests: 100, date: '' });
+    }
+    setLoading(false);
   };
 
   return (
-    <div className="bg-[#fcfbf9] min-h-screen font-sans selection:bg-[#d4af37] selection:text-white">
-      
-      {/* 1. HERO SECTION (Immersive Video/Image) */}
-      <section ref={heroRef} className="h-screen relative flex items-center justify-center overflow-hidden bg-black">
-        <motion.div style={{ y: heroY, opacity: heroOpacity }} className="absolute inset-0 z-0">
-           <div className="absolute inset-0 bg-black/30 z-10" />
-           <img 
-             src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2069&auto=format&fit=crop" 
-             className="w-full h-full object-cover" 
-             alt="Events Hero"
-           />
-        </motion.div>
-        
-        <div className="relative z-20 text-center px-6">
-           <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.2 } } }}>
-             <motion.span variants={blurReveal} className="inline-block text-[#d4af37] text-xs font-bold uppercase tracking-[0.3em] mb-6 border border-[#d4af37]/30 px-4 py-2 rounded-full bg-black/20 backdrop-blur-md">
-               The Collection
-             </motion.span>
-             <div className="overflow-hidden mb-6">
-               <motion.h1 variants={blurReveal} className="text-7xl md:text-9xl font-serif font-bold text-white leading-[0.9] tracking-tighter">
-                 Memories <br/> <span className="italic text-white/50">Unfolded.</span>
-               </motion.h1>
-             </div>
-             <motion.p variants={blurReveal} className="max-w-md mx-auto text-white/70 text-lg font-light leading-relaxed">
-               Spaces designed not just to host events, but to inspire awe.
-             </motion.p>
-           </motion.div>
-        </div>
-
-        <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 2 }} className="absolute bottom-12 z-20 text-white/50">
-           <ArrowDown className="w-6 h-6" />
-        </motion.div>
-      </section>
-
-      {/* 2. THE SPLIT SCREEN SHOWCASE (The Core Fix) */}
-      <div className="relative z-10 bg-[#fcfbf9] rounded-t-[3rem] mt-[-10vh] border-t border-white/20 shadow-[0_-50px_100px_rgba(0,0,0,0.2)]">
-        
-        <div className="flex flex-col-reverse lg:flex-row">
-            
-            {/* LEFT: SCROLLING CONTENT */}
-            <div className="w-full lg:w-1/2 px-6 lg:px-20 py-20 lg:py-32 bg-[#fcfbf9]">
-              {venues.map((venue, index) => (
-                <motion.div 
-                  key={venue.id}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ margin: "-50% 0px -50% 0px" }} // Triggers exact center
-                  onViewportEnter={() => setActiveCard(index)} // UPDATES RIGHT SIDE
-                  variants={blurReveal}
-                  className="min-h-[80vh] flex flex-col justify-center"
-                >
-                   {/* Mobile Image (Only shows on mobile) */}
-                   <div className="lg:hidden w-full aspect-video rounded-2xl overflow-hidden mb-8 shadow-lg">
-                      <img src={venue.img} className="w-full h-full object-cover" alt={venue.title} />
-                   </div>
-
-                   <div className="flex items-center gap-4 mb-8">
-                     <span className="text-5xl font-serif text-zinc-200 font-bold">0{index + 1}</span>
-                     <span className="h-[1px] flex-1 bg-zinc-200" />
-                     <span className="text-[#d4af37] text-xs font-bold tracking-widest uppercase">{venue.subtitle}</span>
-                   </div>
-
-                   <h2 className="text-4xl md:text-6xl font-serif text-zinc-900 mb-8 leading-[1]">
-                     {venue.title}
-                   </h2>
-                   
-                   <p className="text-lg text-zinc-500 leading-relaxed font-light mb-10 border-l-2 border-zinc-200 pl-6">
-                     {venue.desc}
-                   </p>
-
-                   <div className="grid gap-4 mb-10">
-                      <div className="flex items-center gap-4 p-4 bg-white border border-zinc-100 rounded-xl shadow-sm">
-                        <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-[#d4af37]">
-                          <Users size={18} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase text-zinc-400 tracking-wider">Capacity</p>
-                          <p className="text-zinc-900 font-bold">{venue.capacity}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {venue.features.map((feat, i) => (
-                          <span key={i} className="px-4 py-2 bg-zinc-100 text-zinc-600 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                             <CheckCircle size={12} className="text-[#d4af37]" /> {feat}
-                          </span>
-                        ))}
-                      </div>
-                   </div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* RIGHT: STICKY VISUALS (The Fix for Empty Space) */}
-            <div className="hidden lg:block w-1/2 h-screen sticky top-0 bg-black overflow-hidden">
-               
-               {/* 1. Animated Background Mesh (Ensures no white space) */}
-               <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black z-0" />
-               <motion.div 
-                 animate={{ opacity: [0.4, 0.6, 0.4], scale: [1, 1.1, 1] }}
-                 transition={{ duration: 5, repeat: Infinity }}
-                 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#d4af37] rounded-full blur-[200px] opacity-40 z-0"
-               />
-
-               {/* 2. The Active Image */}
-               <AnimatePresence mode="wait">
-                 <motion.img
-                   key={activeCard}
-                   src={venues[activeCard].img}
-                   initial={{ opacity: 0, scale: 1.1 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   exit={{ opacity: 0 }}
-                   transition={{ duration: 0.8, ease: "easeInOut" }}
-                   className="absolute inset-0 w-full h-full object-cover z-10 opacity-80"
-                 />
-               </AnimatePresence>
-
-               {/* 3. Texture Overlay */}
-               <div className="absolute inset-0 z-20 opacity-20 pointer-events-none" style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }}></div>
-
-               {/* 4. Glass Detail Card (Bottom Right) */}
-               <div className="absolute bottom-12 right-12 z-30 p-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] text-white max-w-sm shadow-2xl">
-                   <div className="flex justify-between items-start mb-4">
-                     <p className="text-[10px] uppercase tracking-widest font-bold opacity-60">Live Preview</p>
-                     <Star fill="#d4af37" className="text-[#d4af37]" size={16} />
-                   </div>
-                   <motion.p 
-                     key={activeCard}
-                     initial={{ y: 20, opacity: 0 }}
-                     animate={{ y: 0, opacity: 1 }}
-                     className="text-2xl font-serif leading-tight"
-                   >
-                     {venues[activeCard].title}
-                   </motion.p>
-               </div>
-            </div>
-
-        </div>
-      </div>
-
-      {/* 3. FOOTER */}
-      <section className="bg-black text-white py-40 px-6 text-center relative z-20 overflow-hidden">
-         <div className="relative z-10 max-w-4xl mx-auto">
-           <h2 className="text-5xl md:text-8xl font-serif mb-8 leading-none tracking-tighter">Ready to <br/> Create?</h2>
-           <p className="text-zinc-400 mb-12 text-lg font-light max-w-lg mx-auto">
-             Our dedicated specialists are ready to curate every detail.
-           </p>
+    <AnimatePresence>
+      {show && (
+        <motion.div 
+           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+           className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+        >
+           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
            
-           <form onSubmit={handleSubmit} className="max-w-md mx-auto flex gap-2">
-              <input 
-                type="email" 
-                placeholder="Enter your email" 
-                required
-                className="flex-1 bg-white/10 border border-white/10 rounded-full px-6 py-4 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#d4af37]"
-              />
-              <button className="bg-[#d4af37] text-black px-8 py-4 rounded-full font-bold hover:bg-white transition-colors">
-                Start
-              </button>
-           </form>
-         </div>
-      </section>
+           <motion.div 
+             initial={{ scale: 0.9, y: 20, opacity: 0 }} 
+             animate={{ scale: 1, y: 0, opacity: 1 }} 
+             exit={{ scale: 0.9, y: 20, opacity: 0 }}
+             transition={{ type: "spring", damping: 25, stiffness: 300 }}
+             className="bg-white border border-zinc-200 w-full max-w-lg rounded-[2rem] overflow-hidden relative z-10 shadow-2xl"
+           >
+              <div className="flex justify-between items-center p-6 border-b border-zinc-100 bg-zinc-50">
+                  <h3 className="text-xl font-serif font-bold text-zinc-900">Event Inquiry</h3>
+                  <button onClick={onClose} className="p-2 bg-white border border-zinc-200 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-black transition-colors">
+                      <X size={18} />
+                  </button>
+              </div>
 
-    </div>
+              <div className="p-6 md:p-8">
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5 local-light-form">
+                            <label className="text-xs uppercase font-bold text-zinc-400 pl-1">Event Type</label>
+                            <select 
+                              className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none appearance-none font-medium"
+                              value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}
+                            >
+                                <option>Wedding</option>
+                                <option>Corporate</option>
+                                <option>Social</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1.5">
+                             <label className="text-xs uppercase font-bold text-zinc-400 pl-1">Guests</label>
+                             <input type="number" required className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none font-medium" 
+                               value={formData.guests} onChange={e => setFormData({...formData, guests: Number(e.target.value)})} 
+                             />
+                        </div>
+                     </div>
+
+                     <div className="space-y-1.5">
+                        <label className="text-xs uppercase font-bold text-zinc-400 pl-1">Preferred Date</label>
+                        <input type="date" required className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 p-3 rounded-xl focus:ring-1 focus:ring-[#d4af37] outline-none font-medium text-zinc-500" 
+                          value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} 
+                        />
+                     </div>
+
+                     <div className="space-y-4 pt-2">
+                        <input type="text" placeholder="Your Name" required className="w-full bg-transparent border-b border-zinc-200 text-zinc-900 p-3 focus:border-[#d4af37] outline-none transition-colors placeholder:text-zinc-400" 
+                           value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})}
+                        />
+                        <input type="email" placeholder="Email Address" required className="w-full bg-transparent border-b border-zinc-200 text-zinc-900 p-3 focus:border-[#d4af37] outline-none transition-colors placeholder:text-zinc-400" 
+                           value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+                        />
+                     </div>
+
+                     <button disabled={loading} className="w-full bg-[#d4af37] text-black font-bold py-4 rounded-xl mt-4 hover:bg-black hover:text-white transition-colors flex justify-center gap-2 items-center shadow-lg">
+                        {loading ? <span className="animate-pulse">Processing...</span> : <><Calendar size={18} /> Request Proposal</>}
+                     </button>
+                  </form>
+              </div>
+           </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
