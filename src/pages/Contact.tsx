@@ -40,10 +40,11 @@ const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] relative overflow-hidden flex items-center justify-center py-20 px-4">
+    <div className="min-h-screen bg-[#fcfbf9] relative overflow-hidden flex items-center justify-center py-20 px-4 font-sans text-zinc-900">
+      
       {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80')] bg-cover bg-center opacity-30" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-100/40 rounded-full blur-[100px] z-0 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-yellow-100/40 rounded-full blur-[120px] z-0 pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-6xl grid lg:grid-cols-2 gap-12 items-center">
         
@@ -59,12 +60,12 @@ const Contact = () => {
               <Star size={16} fill="#d4af37" />
               <span className="text-xs font-bold uppercase tracking-[0.2em]">24/7 Concierge</span>
             </div>
-            <h1 className="text-5xl md:text-6xl font-serif font-bold text-white leading-tight">
+            <h1 className="text-5xl md:text-6xl font-serif font-bold text-zinc-900 leading-tight">
               Let us arrange <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d4af37] to-[#f3e5ab]">your perfect stay.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d4af37] to-[#b8952b]">your perfect stay.</span>
             </h1>
-            <p className="text-zinc-400 text-lg mt-4 max-w-md font-light">
-              Whether it is a booking inquiry or a special request, we are at your service.
+            <p className="text-zinc-500 text-lg mt-4 max-w-md font-light leading-relaxed">
+              Whether it is a booking inquiry, dining reservation, or a special request, we are at your service.
             </p>
           </div>
 
@@ -80,7 +81,7 @@ const Contact = () => {
           initial={{ opacity: 0, x: 30 }} 
           animate={{ opacity: 1, x: 0 }} 
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 md:p-10 rounded-[2rem] shadow-2xl"
+          className="bg-white/80 backdrop-blur-xl border border-white p-8 md:p-10 rounded-[2rem] shadow-2xl shadow-zinc-200/50"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid md:grid-cols-2 gap-5">
@@ -94,7 +95,7 @@ const Contact = () => {
               <textarea 
                 required 
                 rows={4} 
-                className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-[#d4af37] transition-all resize-none placeholder:text-zinc-600" 
+                className="w-full bg-zinc-50/50 border border-zinc-200 rounded-xl p-4 text-zinc-900 outline-none focus:border-[#d4af37] transition-all resize-none placeholder:text-zinc-400 focus:bg-white" 
                 placeholder="How may we assist you?"
                 value={formData.message} 
                 onChange={e => setFormData({...formData, message: e.target.value})} 
@@ -103,7 +104,7 @@ const Contact = () => {
 
             <button 
               disabled={loading} 
-              className="w-full bg-[#d4af37] text-black font-bold py-4 rounded-xl hover:bg-white transition-all flex items-center justify-center gap-2 mt-4 shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+              className="w-full bg-[#d4af37] text-white font-bold py-4 rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 mt-4 shadow-[0_10px_30px_rgba(212,175,55,0.3)]"
             >
               {loading ? <Loader2 className="animate-spin" /> : <Send size={18} />} 
               Send Message
@@ -118,13 +119,13 @@ const Contact = () => {
 
 // UI Helper Components
 const ContactCard = ({ icon: Icon, title, value }: any) => (
-  <div className="flex items-center gap-4 bg-white/5 border border-white/5 p-4 rounded-xl hover:bg-white/10 transition-colors cursor-default">
-    <div className="w-12 h-12 rounded-full bg-[#d4af37]/20 flex items-center justify-center text-[#d4af37]">
+  <div className="flex items-center gap-4 bg-white border border-zinc-100 p-4 rounded-xl hover:shadow-lg transition-all cursor-default group">
+    <div className="w-12 h-12 rounded-full bg-[#d4af37]/10 flex items-center justify-center text-[#d4af37] group-hover:bg-[#d4af37] group-hover:text-white transition-colors">
       <Icon size={20} />
     </div>
     <div>
-      <h3 className="text-zinc-500 text-xs font-bold uppercase tracking-wider">{title}</h3>
-      <p className="text-white font-serif text-lg">{value}</p>
+      <h3 className="text-zinc-400 text-xs font-bold uppercase tracking-wider">{title}</h3>
+      <p className="text-zinc-900 font-serif text-lg">{value}</p>
     </div>
   </div>
 );
@@ -142,7 +143,7 @@ const InputGroup = ({ label, type = "text", value, onChange }: InputGroupProps) 
     <input 
       type={type} 
       required 
-      className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-[#d4af37] transition-all placeholder:text-zinc-600"
+      className="w-full bg-zinc-50/50 border border-zinc-200 rounded-xl p-4 text-zinc-900 outline-none focus:border-[#d4af37] transition-all placeholder:text-zinc-400 focus:bg-white"
       value={value} 
       onChange={e => onChange(e.target.value)} 
     />

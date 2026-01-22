@@ -56,21 +56,35 @@ export default function ChatBot() {
     const lowerText = textToSend.toLowerCase();
     let autoReply = "";
 
-    if (lowerText.includes("book") || lowerText.includes("room") || lowerText.includes("reservation")) {
-       autoReply = "I can certainly help you with that. Navigating you to our **Rooms & Suites** page to view availability.";
-       setTimeout(() => { navigate('/rooms'); setIsOpen(false); }, 2000);
-    } 
-    else if (lowerText.includes("dining") || lowerText.includes("food") || lowerText.includes("restaurant")) {
-       autoReply = "Excellent choice. Taking you to our **Dining** options where you can explore our culinary offerings.";
+    // 1. Dining / Food
+    if (lowerText.includes("dining") || lowerText.includes("food") || lowerText.includes("restaurant") || lowerText.includes("dinner") || lowerText.includes("lunch")) {
+       autoReply = "Excellent choice. Taking you to our **Dining** options where you can explore our culinary offerings and reserve a table.";
        setTimeout(() => { navigate('/dining'); setIsOpen(false); }, 2000);
     }
-    else if (lowerText.includes("contact") || lowerText.includes("help") || lowerText.includes("support")) {
+    // 2. Cancellation / Profile
+    else if (lowerText.includes("cancel") || lowerText.includes("my booking") || (lowerText.includes("check") && lowerText.includes("booking"))) {
+       autoReply = "Accessing your personal dashboard. You can manage cancellations and view booking details in your **Profile**.";
+       setTimeout(() => { navigate('/profile'); setIsOpen(false); }, 2000);
+    }
+    // 3. Events / Weddings
+    else if (lowerText.includes("event") || lowerText.includes("wedding") || lowerText.includes("meeting") || lowerText.includes("conference")) {
+       autoReply = "We host world-class events. Redirecting you to our **Events** page for more details.";
+       setTimeout(() => { navigate('/events'); setIsOpen(false); }, 2000); // Ensure /events route exists
+    }
+    // 4. Contact / Help
+    else if (lowerText.includes("contact") || lowerText.includes("help") || lowerText.includes("support") || lowerText.includes("call")) {
        autoReply = "Connecting you with our support team. Opening the **Contact** page now.";
        setTimeout(() => { navigate('/contact'); setIsOpen(false); }, 2000);
     }
-    else if (lowerText.includes("login") || lowerText.includes("sign in")) {
+    // 5. Auth
+    else if (lowerText.includes("login") || lowerText.includes("sign")) {
        autoReply = "Securely redirecting you to the **Login** portal.";
        setTimeout(() => { navigate('/login'); setIsOpen(false); }, 1500);
+    }
+    // 6. Room Booking (Generic Fallback for "book")
+    else if (lowerText.includes("book") || lowerText.includes("room") || lowerText.includes("suite") || lowerText.includes("stay")) {
+       autoReply = "I can certainly help you with that. Navigating you to our **Rooms & Suites** page to view availability.";
+       setTimeout(() => { navigate('/rooms'); setIsOpen(false); }, 2000);
     }
 
     if (autoReply) {
