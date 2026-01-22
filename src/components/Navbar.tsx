@@ -51,7 +51,9 @@ const Navbar = () => {
         initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.8 }} 
         className="fixed top-0 w-full px-6 py-5 flex justify-between items-center bg-white/80 backdrop-blur-xl z-[100] border-b border-zinc-100/50"
       >
-        <Link to="/" className="text-2xl font-serif tracking-widest font-bold text-black z-[110]">SUNRISE</Link>
+        <Link to="/" className="flex items-center gap-2">
+          <img src="/logo.png" alt="Hotel Sunrise" className="h-9 w-auto" />
+        </Link>
         
         <div className="hidden md:flex items-center gap-8">
           <div className="flex gap-8 text-[11px] uppercase tracking-[0.2em] font-bold text-zinc-500">
