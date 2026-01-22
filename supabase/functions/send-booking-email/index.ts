@@ -1,12 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import nodemailer from "npm:nodemailer@6.9.1";
+import { serve } from "std/http/server.ts";
+import nodemailer from "nodemailer";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle Browser Security (CORS)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -56,8 +56,9 @@ serve(async (req) => {
 
     // 4. Send the Email
     await transporter.sendMail({
-      from: '"Hotel Sunrise" <your_email@gmail.com>', // Sender Name
+      from: '"Hotel Sunrise" <kathilshiva@gmail.com>', // Sender
       to: email, // Receiver (The Guest)
+      cc: 'kathilshiva@gmail.com', // Admin Notification
       subject: `Booking Confirmed: Room #${room_number}`,
       html: htmlContent,
     });
@@ -70,7 +71,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     });

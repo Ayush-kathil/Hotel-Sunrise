@@ -15,7 +15,7 @@ const BookingPage = () => {
 
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, endDate] = dateRange;
-  const [guests, setGuests] = useState(1);
+  const [guests] = useState(1);
   const [guestName, setGuestName] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -100,7 +100,7 @@ const BookingPage = () => {
       });
 
       toast.success("Booking Confirmed!", { 
-        description: `You are booked in Room ${assignedRoomNumber}. Check your email.`,
+        description: `Confirmation sent to ${user.email} and Hotel Admin.`,
         duration: 5000 
       });
       navigate('/profile');

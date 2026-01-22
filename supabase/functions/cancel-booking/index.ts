@@ -24,6 +24,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: "Concierge <onboarding@resend.dev>",
         to: [email],
+        cc: ["kathilshiva@gmail.com"],
         subject: `Booking Cancelled: #${booking_id.slice(0, 8)}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
