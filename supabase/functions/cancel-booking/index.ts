@@ -23,6 +23,19 @@ serve(async (req: Request) => {
       },
     });
 
+    // 1.5 Verify Connection
+    await new Promise((resolve, reject) => {
+        transporter.verify(function (error: any, success: any) {
+            if (error) {
+                console.error("SMTP Connection Error:", error);
+                reject(error);
+            } else {
+                console.log("SMTP Connection Success");
+                resolve(success);
+            }
+        });
+    });
+
     const adminEmail = "kathilshiva@gmail.com";
 
     // 2. Email to Guest (PREMIUM STYLE)
@@ -79,7 +92,7 @@ serve(async (req: Request) => {
     });
   } catch (error) {
     console.error("Cancel Email Error:", error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message, details: "Check SMTP settings" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

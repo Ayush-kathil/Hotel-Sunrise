@@ -49,7 +49,8 @@ const Rooms = () => {
       size: "350 sq.ft",
       desc: "Our signature room featuring a plush king-sized bed, city views, and a dedicated workspace.",
       amenities: ["King Bed", "City View", "Work Desk", "Rain Shower"],
-      img: "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=2070&auto=format&fit=crop"
+      img: "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=2070&auto=format&fit=crop",
+      video: "https://videos.pexels.com/video-files/7043813/7043813-hd_1080_1920_30fps.mp4"
     },
     {
       id: 2,
@@ -58,7 +59,8 @@ const Rooms = () => {
       size: "400 sq.ft",
       desc: "Ideal for friends or family, offering two queen beds and a private balcony overlooking our lush serenity gardens.",
       amenities: ["2 Queen Beds", "Garden Balcony", "Bathtub", "Lounge Area"],
-      img: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=2074&auto=format&fit=crop"
+      img: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=2074&auto=format&fit=crop",
+      video: "https://videos.pexels.com/video-files/7578552/7578552-uhd_2560_1440_30fps.mp4"
     },
     {
       id: 3,
@@ -67,7 +69,8 @@ const Rooms = () => {
       size: "550 sq.ft",
       desc: "A spacious open-plan studio with a kitchenette and extra living space. Perfect for longer stays.",
       amenities: ["Kitchenette", "Dining Area", "2 Double Beds", "Smart Home Control"],
-      img: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=2070&auto=format&fit=crop"
+      img: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?q=80&w=2070&auto=format&fit=crop",
+      video: "https://videos.pexels.com/video-files/3770033/3770033-uhd_2560_1440_25fps.mp4"
     },
     {
       id: 4,
@@ -76,7 +79,8 @@ const Rooms = () => {
       size: "650 sq.ft",
       desc: "Elevate your stay with a separate living area, premium mini-bar access, and exclusive entry to the Executive Lounge.",
       amenities: ["Separate Living Room", "Executive Lounge", "Walk-in Closet", "4K Smart TV"],
-      img: "https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=2074&auto=format&fit=crop"
+      img: "https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=2074&auto=format&fit=crop",
+      video: "https://videos.pexels.com/video-files/6981411/6981411-uhd_2560_1440_25fps.mp4"
     },
     {
       id: 5,
@@ -85,7 +89,8 @@ const Rooms = () => {
       size: "1,200 sq.ft",
       desc: "The pinnacle of luxury. Panoramic corner views, a private dining room, and a marble bathroom with a jacuzzi.",
       amenities: ["Panoramic Views", "Private Dining", "Jacuzzi", "Butler Service"],
-      img: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=2070&auto=format&fit=crop"
+      img: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=2070&auto=format&fit=crop",
+      video: "https://videos.pexels.com/video-files/4919537/4919537-uhd_2560_1440_25fps.mp4"
     }
   ];
 

@@ -15,7 +15,7 @@ const BookingPage = () => {
 
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, endDate] = dateRange;
-  const [guests] = useState(1);
+  const [guests, setGuests] = useState({ adults: 1, children: 0 });
   const [guestName, setGuestName] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -95,7 +95,7 @@ const BookingPage = () => {
             check_in: startDate,
             check_out: endDate,
             nights: nights,
-            guests: guests,
+            guests: guests.adults + guests.children,
             status: 'confirmed'
         }])
         .select()
@@ -245,11 +245,33 @@ const BookingPage = () => {
                  
                  <div className="space-y-6 relative z-10">
                     <div>
-                       <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Guest Name</label>
-                       <div className="relative bg-zinc-50 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#d4af37]/20 transition-all border border-zinc-200">
-                          <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                          <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Full Name" className="w-full bg-transparent border-none py-4 pl-12 pr-4 text-zinc-900 focus:outline-none placeholder:text-zinc-400" />
-                       </div>
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Guest Details</label>
+                        
+                        {/* Guest Name Input */}
+                        <div className="relative bg-zinc-50 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#d4af37]/20 transition-all border border-zinc-200 mb-4">
+                           <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                           <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Full Name" className="w-full bg-transparent border-none py-4 pl-12 pr-4 text-zinc-900 focus:outline-none placeholder:text-zinc-400" />
+                        </div>
+ 
+                        {/* Guest Count (Adults + Children) */}
+                        <div className="grid grid-cols-2 gap-4">
+                           <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200 flex flex-col">
+                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Adults</span>
+                              <div className="flex items-center justify-between">
+                                 <button onClick={() => setGuests(prev => ({ ...prev, adults: Math.max(1, prev.adults - 1) }))} className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-zinc-600 hover:bg-zinc-200">-</button>
+                                 <span className="font-bold text-lg">{guests.adults}</span>
+                                 <button onClick={() => setGuests(prev => ({ ...prev, adults: prev.adults + 1 }))} className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-zinc-600 hover:bg-zinc-200">+</button>
+                              </div>
+                           </div>
+                           <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-200 flex flex-col">
+                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Children</span>
+                              <div className="flex items-center justify-between">
+                                 <button onClick={() => setGuests(prev => ({ ...prev, children: Math.max(0, prev.children - 1) }))} className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-zinc-600 hover:bg-zinc-200">-</button>
+                                 <span className="font-bold text-lg">{guests.children}</span>
+                                 <button onClick={() => setGuests(prev => ({ ...prev, children: prev.children + 1 }))} className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-zinc-600 hover:bg-zinc-200">+</button>
+                              </div>
+                           </div>
+                        </div>
                     </div>
 
                     <div className="bg-zinc-50 rounded-2xl p-6 border border-zinc-100 space-y-4">
