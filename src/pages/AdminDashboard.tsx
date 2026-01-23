@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 // --- TYPES ---
 interface Room { id: number; room_number: string; category: string; status: 'available' | 'occupied' | 'maintenance'; price: number; }
-interface Reservation { id: number; room_number: string; check_in: string; check_out: string; total_price: number; created_at: string; profiles: { full_name: string; mobile_number: string; } | null; }
+interface Reservation { id: number; room_number: string; check_in: string; check_out: string; total_price: number; created_at: string; status?: string; profiles: { full_name: string; mobile_number: string; } | null; }
 interface Notification { id: number; title: string; message: string; type: 'offer' | 'news' | 'alert'; created_at: string; }
 interface DiningReservation { id: number; name: string; date: string; time: string; guests: number; status: string; }
 interface EventInquiry { id: number; name: string; email: string; event_type: string; date: string; guests: number; status: string; }
@@ -40,13 +40,12 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState<EventInquiry[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [housekeeping, setHousekeeping] = useState<HousekeepingTask[]>([]);
-  const [guests, setGuests] = useState<Guest[]>([]); // External guests
+  const [guests, setGuests] = useState<Guest[]>([]);
 
   // FETCH DATA
   const fetchData = async () => {
     try {
       if (!isAuthenticated) return;
-      // setLoading(true); // Don't full reload on updates, handled by initial load
       
       const { data: rData } = await supabase.from('rooms').select('*').order('room_number');
       const { data: bData } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
@@ -56,7 +55,7 @@ const AdminDashboard = () => {
       const { data: eData } = await supabase.from('event_inquiries').select('*').order('created_at', { ascending: false });
       const { data: mData } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
       const { data: hData } = await supabase.from('housekeeping').select('*').order('room_number');
-      const { data: gData } = await supabase.from('Guest').select('*'); // Ensure table name casing matches DB
+      const { data: gData } = await supabase.from('Guest').select('*');
 
       if (rData) {
         setRooms(rData as any);
@@ -64,9 +63,7 @@ const AdminDashboard = () => {
       }
       
       if (bData) {
-        // Manual Join for profiles
         const joinedBookings = bData.map((b: any) => {
-           // Try to find profile by user_id
            const profile = pData?.find((p: any) => p.id === b.user_id);
            return {
              ...b,
@@ -101,43 +98,21 @@ const AdminDashboard = () => {
     }
   };
 
-  // INITIAL LOAD
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchData();
-    } else {
-      setLoading(false);
-    }
+    if (isAuthenticated) fetchData();
   }, [isAuthenticated]);
 
-  // REALTIME SUBSCRIPTIONS
   useEffect(() => {
     if (!isAuthenticated) return;
-
     const channel = supabase.channel('admin-dashboard-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public' },
-        (payload) => {
-          console.log('Realtime change received:', payload);
-          // For simplicity and accuracy effectively ensuring ALL data is fresh, we'll re-fetch.
-          // In a larger app, we'd update specific state arrays optimistically.
-          fetchData();
-          toast.info(`Update received from ${payload.table}`);
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => fetchData())
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [isAuthenticated]);
 
-  // AUTH HANDLER
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
     const envPasscode = import.meta.env.VITE_ADMIN_PASSCODE;
-    
     if (passcodeInput === envPasscode) {
       setIsAuthenticated(true);
       sessionStorage.setItem('sunrise_admin_auth', 'true');
@@ -150,7 +125,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // ACTIONS
   const handleLogout = async () => {
     await supabase.auth.signOut();
     sessionStorage.removeItem('sunrise_admin_auth');
@@ -164,15 +138,10 @@ const AdminDashboard = () => {
     const title = formData.get('title') as string;
     const message = formData.get('message') as string;
     const type = formData.get('type') as string;
-
     if (!title || !message) return toast.warning('Please fill all fields');
-
     const { error } = await supabase.from('notifications').insert([{ title, message, type, is_active: true }]);
     if (error) toast.error(error.message);
-    else {
-      toast.success('Update pushed!');
-      (e.target as HTMLFormElement).reset();
-    }
+    else { toast.success('Update pushed!'); (e.target as HTMLFormElement).reset(); }
   };
 
   const handleDeleteNotification = async (id: number) => {
@@ -180,55 +149,38 @@ const AdminDashboard = () => {
       const { error } = await supabase.from('notifications').delete().eq('id', id);
       if (error) throw error;
       toast.success('Removed');
-      // State filtered by realtime or generic fetch logic, but strictly filtering here for instant feedback
       setNotifications(prev => prev.filter(n => n.id !== id));
-    } catch(err: any) {
-      toast.error('Delete failed', { description: err.message });
-    }
+    } catch(err: any) { toast.error('Delete failed', { description: err.message }); }
   };
 
-  // --- RENDER: AUTH SCREEN ---
   if (!isAuthenticated) {
     return (
-      <div className={`flex items-center justify-center h-screen w-full font-sans ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100'}`}>
+      <div className={`flex items-center justify-center h-screen w-full font-sans fixed inset-0 z-50 ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100'}`}>
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20 blur-sm"></div>
-        
         <div className={`relative z-10 p-8 rounded-3xl border backdrop-blur-xl shadow-2xl w-full max-w-md ${darkMode ? 'bg-black/40 border-white/10' : 'bg-white/40 border-white/50'}`}>
            <div className="flex flex-col items-center mb-8">
               <div className="w-16 h-16 rounded-2xl bg-[#6366F1] flex items-center justify-center text-white font-serif italic text-2xl shadow-[0_0_40px_-10px_#6366F1]">S</div>
               <h1 className="mt-6 text-2xl font-bold tracking-wider">Admin Portal</h1>
               <p className="opacity-50 text-sm">Sunrise Hotel & Resort</p>
            </div>
-
            <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
                  <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Passcode</label>
                  <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50" size={16} />
-                    <input 
-                      type="password" 
-                      autoFocus
-                      value={passcodeInput}
-                      onChange={(e) => { setPasscodeInput(e.target.value); setAuthError(false); }}
-                      className={`w-full bg-black/20 border text-center font-mono text-lg tracking-[0.5em] rounded-xl py-4 px-10 outline-none transition-all ${authError ? 'border-red-500/50 text-red-500' : 'border-white/10 focus:border-[#6366F1]/50'}`}
-                      placeholder="••••••"
-                    />
+                    <input type="password" autoFocus value={passcodeInput} onChange={(e) => { setPasscodeInput(e.target.value); setAuthError(false); }} className={`w-full bg-black/20 border text-center font-mono text-lg tracking-[0.5em] rounded-xl py-4 px-10 outline-none transition-all ${authError ? 'border-red-500/50 text-red-500' : 'border-white/10 focus:border-[#6366F1]/50'}`} placeholder="••••••" />
                  </div>
                  {authError && <p className="text-center text-red-500 text-xs font-bold animate-pulse">Invalid Passcode</p>}
               </div>
-
-              <button className="w-full bg-[#6366F1] hover:bg-[#5558DD] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#6366F1]/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-                Access Dashboard
-              </button>
+              <button className="w-full bg-[#6366F1] hover:bg-[#5558DD] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#6366F1]/20 transition-all hover:scale-[1.02] active:scale-[0.98]">Access Dashboard</button>
            </form>
         </div>
       </div>
     );
   }
 
-  // --- RENDER: DASHBOARD ---
   return (
-    <div className={`flex h-screen font-sans overflow-hidden ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100 text-gray-900'}`}>
+    <div className={`flex h-screen w-full font-sans fixed inset-0 overflow-hidden ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100 text-gray-900'}`}>
       
       {/* SIDEBAR */}
       <aside className={`w-64 flex flex-col border-r shrink-0 z-20 ${darkMode ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}`}>
@@ -238,9 +190,7 @@ const AdminDashboard = () => {
             <span>Sunrise<span className="opacity-30">Admin</span></span>
           </h1>
         </div>
-
         <nav className="flex-1 p-4 space-y-8 overflow-y-auto custom-scrollbar">
-          {/* GROUP 1 */}
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">Front Desk</p>
             <div className="space-y-1">
@@ -250,8 +200,6 @@ const AdminDashboard = () => {
               <NavItem icon={UserCheck} label="Guest Database" active={activeTab === 'guest_db'} onClick={() => setActiveTab('guest_db')} darkMode={darkMode} />
             </div>
           </div>
-
-          {/* GROUP 2 */}
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">Operations</p>
             <div className="space-y-1">
@@ -260,8 +208,6 @@ const AdminDashboard = () => {
               <NavItem icon={PartyPopper} label="Events" active={activeTab === 'events'} onClick={() => setActiveTab('events')} darkMode={darkMode} />
             </div>
           </div>
-
-          {/* GROUP 3 */}
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">System</p>
             <div className="space-y-1">
@@ -270,22 +216,17 @@ const AdminDashboard = () => {
             </div>
           </div>
         </nav>
-
         <div className="p-4 border-t border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#a855f7]" />
-              <div className="text-xs">
-                <p className="font-bold">Admin</p>
-                <p className="opacity-40">Online</p>
-              </div>
+              <div className="text-xs"> <p className="font-bold">Admin</p> <p className="opacity-40">Online</p> </div>
             </div>
             <button onClick={handleLogout} className="p-2 hover:bg-black/20 rounded-lg text-red-500 transition-colors"><LogOut size={16} /></button>
         </div>
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-        {/* HEADER */}
+      <main className="flex-1 flex flex-col min-h-0 relative h-full">
         <header className={`flex items-center justify-between px-8 py-4 border-b shrink-0 ${darkMode ? 'border-white/5' : 'bg-white border-gray-200'}`}>
           <h2 className="text-xl font-bold capitalize">{activeTab.replace('_', ' ')}</h2>
           <div className="flex items-center gap-4">
@@ -298,7 +239,7 @@ const AdminDashboard = () => {
         </header>
 
         {/* SCROLLABLE AREA */}
-        <div className="flex-1 overflow-y-auto p-8 pb-32 space-y-8 scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-8 pb-40 space-y-8 scroll-smooth w-full">
           
           {loading && rooms.length === 0 ? (
              <div className="flex flex-col items-center justify-center py-20 opacity-50 animate-pulse gap-4">
@@ -307,7 +248,6 @@ const AdminDashboard = () => {
              </div>
           ) : (
             <>
-              {/* === TAB: OVERVIEW === */}
               {activeTab === 'overview' && (
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -316,7 +256,6 @@ const AdminDashboard = () => {
                        <StatCard icon={Utensils} label="Dining Resv" value={dining.length} color="bg-[#F97316]" />
                        <StatCard icon={Mail} label="Messages" value={messages.length} color="bg-[#EC4899]" />
                     </div>
-                    {/* Recent Bookings List */}
                     <div className={`rounded-2xl p-6 border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                        <h3 className="font-bold text-lg mb-4">Recent Hotel Bookings</h3>
                        {reservations.slice(0, 5).map(res => (
@@ -333,7 +272,6 @@ const AdminDashboard = () => {
                   </>
                )}
 
-              {/* === TAB: RESERVATIONS (Guests) === */}
               {activeTab === 'guests' && (
                   <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                      <table className="w-full text-sm text-left">
@@ -352,19 +290,38 @@ const AdminDashboard = () => {
                   </div>
               )}
 
-              {/* === TAB: INVENTORY === */}
               {activeTab === 'inventory' && (
-                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {rooms.map(r => (
-                       <div key={r.id} className={`p-4 rounded-xl border text-center transition-all hover:scale-105 ${r.status === 'available' ? 'border-green-500/20 text-green-500 bg-green-500/5' : r.status === 'occupied' ? 'border-blue-500/20 text-blue-500 bg-blue-500/5' : 'border-red-500/20 text-red-500 bg-red-500/5'}`}>
-                          <h3 className="font-bold text-2xl">{r.room_number}</h3>
-                          <p className="text-[10px] uppercase opacity-60 font-bold tracking-wider mt-1">{r.status}</p>
-                       </div>
-                    ))}
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {rooms.map(r => {
+                       const occupied = r.status === 'occupied';
+                       const maintenance = r.status === 'maintenance';
+                       const reservation = occupied ? reservations.find(res => res.room_number === r.room_number && new Date(res.check_out) >= new Date()) : null;
+
+                       return (
+                          <div key={r.id} className={`p-6 rounded-xl border text-center transition-all hover:scale-105 flex flex-col justify-center min-h-[140px] relative overflow-hidden ${
+                             occupied ? 'bg-yellow-500 border-yellow-600 text-black shadow-lg shadow-yellow-500/20' : 
+                             maintenance ? 'border-red-500/20 text-red-500 bg-red-500/5' : 
+                             'border-green-500/20 text-green-500 bg-green-500/5'
+                          }`}>
+                              {/* Background Pattern for visuals */}
+                              {occupied && <div className="absolute top-0 right-0 p-2 opacity-10"><Lock size={64}/></div>}
+
+                              <h3 className="font-bold text-3xl mb-1">{r.room_number}</h3>
+                              <p className={`text-[10px] uppercase font-bold tracking-widest ${occupied ? 'opacity-60' : 'opacity-60'}`}>
+                                 {r.status}
+                              </p>
+
+                              {occupied && reservation && (
+                                 <div className="mt-3 pt-3 border-t border-black/10">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-60 mb-0.5">Check Out</p>
+                                    <p className="text-sm font-bold">{new Date(reservation.check_out).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                                 </div>
+                              )}
+                          </div>
+                   )})}
                  </div>
               )}
 
-              {/* === TAB: GUEST DB === */}
               {activeTab === 'guest_db' && (
                  <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <table className="w-full text-sm text-left">
@@ -380,30 +337,23 @@ const AdminDashboard = () => {
                                 </td>
                              </tr>
                           ))}
-                          {guests.length === 0 && <tr><td colSpan={3} className="p-8 text-center opacity-30 italic">No external guests found in Guest table.</td></tr>}
                        </tbody>
                     </table>
                  </div>
               )}
 
-              {/* === TAB: HOUSEKEEPING === */}
               {activeTab === 'housekeeping' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Task List */}
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                         <Brush size={18}/> Cleaning Tasks
-                    </h3>
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2"> <Brush size={18}/> Cleaning Tasks </h3>
+                    <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                        {housekeeping.map(task => (
                           <div key={task.id} className={`flex items-center gap-4 p-4 rounded-xl border ${darkMode ? 'bg-[#252525] border-white/5' : 'bg-gray-50 border-gray-200'}`}>
                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
                                 task.status === 'clean' ? 'bg-green-500/20 text-green-500' :
                                 task.status === 'dirty' ? 'bg-red-500/20 text-red-500' :
                                 'bg-yellow-500/20 text-yellow-500'
-                             }`}>
-                                {task.room_number}
-                             </div>
+                             }`}> {task.room_number} </div>
                              <div>
                                 <p className="font-bold">{task.assigned_to || 'Unassigned'}</p>
                                 <p className="text-xs opacity-50 uppercase tracking-wider">{task.status}</p>
@@ -420,24 +370,19 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                   
-                  {/* Room Status Visualization */}
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                      <h3 className="font-bold text-lg mb-4">Floor Plan Status</h3>
                      <div className="grid grid-cols-4 gap-2">
                         {rooms.map(r => {
-                          const occupants = reservations.find(res => res.room_number === r.room_number && new Date(res.check_out) > new Date());
-                          // Determine housekeeping status from housekeeping table
                           const hpStatus = housekeeping.find(h => h.room_number === r.room_number)?.status || 'clean';
-                          
                           return (
                            <div key={r.id} className={`p-2 text-center rounded-lg border text-xs flex flex-col items-center justify-center h-20 transition-all ${
                               hpStatus === 'dirty' ? 'border-red-500/50 bg-red-500/10 text-red-500' :
                               hpStatus === 'cleaning' ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500' :
-                              r.status === 'occupied' ? 'border-blue-500/20 bg-blue-500/5 text-blue-500' :
                               'border-green-500/20 bg-green-500/5 text-green-500'
                            }`}>
                               <span className="text-lg font-bold">{r.room_number}</span>
-                              <span className="text-[9px] opacity-70 mb-1 font-bold uppercase">{hpStatus === 'clean' ? r.status : hpStatus}</span>
+                              <span className="text-[9px] opacity-70 mb-1 font-bold uppercase">{hpStatus === 'clean' ? 'Ready' : hpStatus}</span>
                            </div>
                         )})}
                      </div>
@@ -445,7 +390,6 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {/* === TAB: DINING === */}
               {activeTab === 'dining' && (
                  <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <div className="p-6 border-b border-white/5"><h2 className="font-bold text-lg">Table Reservations</h2></div>
@@ -460,13 +404,11 @@ const AdminDashboard = () => {
                                 <td className="p-4"><span className="px-2 py-1 bg-orange-500/10 text-orange-500 rounded text-xs font-bold uppercase">{d.status}</span></td>
                              </tr>
                           ))}
-                          {dining.length === 0 && <tr><td colSpan={4} className="p-8 text-center opacity-30">No dining reservations found.</td></tr>}
                        </tbody>
                     </table>
                  </div>
               )}
 
-              {/* === TAB: EVENTS === */}
               {activeTab === 'events' && (
                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {events.map(e => (
@@ -477,16 +419,12 @@ const AdminDashboard = () => {
                           </div>
                           <h3 className="font-bold text-lg mb-1">{e.event_type}</h3>
                           <p className="text-sm opacity-60 mb-4">by {e.name}</p>
-                          <div className="flex items-center gap-2 text-xs opacity-50">
-                             <Mail size={12}/> {e.email} • {e.guests} Guests
-                          </div>
+                          <div className="flex items-center gap-2 text-xs opacity-50"> <Mail size={12}/> {e.email} • {e.guests} Guests </div>
                        </div>
                     ))}
-                    {events.length === 0 && <div className="col-span-3 text-center opacity-30 py-10">No event inquiries yet.</div>}
                  </div>
               )}
 
-              {/* === TAB: MESSAGES === */}
               {activeTab === 'messages' && (
                  <div className="space-y-4">
                     {messages.map(m => (
@@ -504,11 +442,9 @@ const AdminDashboard = () => {
                           </div>
                        </div>
                     ))}
-                    {messages.length === 0 && <div className="text-center opacity-30 py-10">No messages in inbox.</div>}
                  </div>
               )}
 
-              {/* === TAB: UPDATES === */}
               {activeTab === 'updates' && (
                  <div className="grid lg:grid-cols-3 gap-8">
                    <div className={`lg:col-span-1 p-6 rounded-2xl border h-fit ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
@@ -533,33 +469,22 @@ const AdminDashboard = () => {
                                </p>
                                <p className="text-xs opacity-50">{n.message}</p>
                              </div>
-                             <button 
-                               onClick={() => handleDeleteNotification(n.id)} 
-                               className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 text-xs font-bold"
-                             >
-                                <LogOut size={14} className="rotate-0" /> Delete
-                             </button>
+                             <button onClick={() => handleDeleteNotification(n.id)} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 text-xs font-bold"> <LogOut size={14} className="rotate-0" /> Delete </button>
                           </div>
                        ))}
-                       {notifications.length === 0 && <div className="text-center p-8 opacity-30 italic border-2 border-dashed rounded-2xl">No active notifications</div>}
                     </div>
                  </div>
               )}
-
             </>
           )}
-
         </div>
       </main>
     </div>
   );
 };
 
-// --- SUB COMPONENTS ---
 const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
-  <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-[#6366F1] text-white' : 'opacity-50 hover:opacity-100'}`}>
-    <Icon size={18} /> {label}
-  </button>
+  <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-[#6366F1] text-white' : 'opacity-50 hover:opacity-100'}`}> <Icon size={18} /> {label} </button>
 );
 
 const StatCard = ({ icon: Icon, label, value, color }: any) => (
