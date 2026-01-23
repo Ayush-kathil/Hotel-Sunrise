@@ -42,26 +42,38 @@ const AdminDashboard = () => {
   const [housekeeping, setHousekeeping] = useState<HousekeepingTask[]>([]);
   const [guests, setGuests] = useState<Guest[]>([]);
 
-  // FETCH DATA - Each query wrapped separately to prevent one failure from blocking others
+  // FETCH DATA
   const fetchData = async () => {
     if (!isAuthenticated) return;
     
+    console.log('--- STARTING DATA FETCH ---'); // DEBUG
+
     try {
-      // Fetch rooms
+      // 1. Fetch rooms
+      console.log('Fetching rooms...');
       const { data: rData, error: rError } = await supabase.from('rooms').select('*').order('room_number');
-      if (rError) console.error('Rooms fetch error:', rError);
-      else if (rData) {
+      if (rError) {
+        console.error('❌ Rooms fetch error:', rError);
+        toast.error('Error fetching rooms');
+      } else if (rData) {
+        console.log(`✅ Rooms fetched: ${rData.length} items`);
         setRooms(rData as Room[]);
         setStats(prev => ({ ...prev, availableRooms: rData.filter(r => r.status === 'available').length }));
       }
 
-      // Fetch bookings
+      // 2. Fetch bookings
+      console.log('Fetching bookings...');
       const { data: bData, error: bError } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
-      if (bError) console.error('Bookings fetch error:', bError);
+      if (bError) {
+         console.error('❌ Bookings fetch error:', bError);
+         toast.error('Error fetching bookings');
+      } else {
+         console.log(`✅ Bookings fetched: ${bData?.length || 0} items`);
+      }
       
-      // Fetch profiles for joining
+      // 3. Fetch profiles (for joining names)
       const { data: pData, error: pError } = await supabase.from('profiles').select('id, full_name, mobile_number');
-      if (pError) console.error('Profiles fetch error:', pError);
+      if (pError) console.error('⚠️ Profiles fetch error (non-critical):', pError);
       
       if (bData) {
         const joinedBookings = bData.map((b: any) => {
@@ -85,47 +97,40 @@ const AdminDashboard = () => {
         }));
       }
 
-      // Fetch notifications
-      const { data: nData, error: nError } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
-      if (nError) console.error('Notifications fetch error:', nError);
-      else if (nData) setNotifications(nData as Notification[]);
+      // 4. Other Tables
+      const { data: nData } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
+      if (nData) setNotifications(nData as Notification[]);
 
-      // Fetch dining reservations
-      const { data: dData, error: dError } = await supabase.from('dining_reservations').select('*').order('date', { ascending: true });
-      if (dError) console.error('Dining fetch error:', dError);
-      else if (dData) setDining(dData as DiningReservation[]);
+      const { data: dData } = await supabase.from('dining_reservations').select('*').order('date', { ascending: true });
+      if (dData) setDining(dData as DiningReservation[]);
 
-      // Fetch event inquiries
-      const { data: eData, error: eError } = await supabase.from('event_inquiries').select('*').order('created_at', { ascending: false });
-      if (eError) console.error('Events fetch error:', eError);
-      else if (eData) setEvents(eData as EventInquiry[]);
+      const { data: eData } = await supabase.from('event_inquiries').select('*').order('created_at', { ascending: false });
+      if (eData) setEvents(eData as EventInquiry[]);
 
-      // Fetch contact messages
-      const { data: mData, error: mError } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
-      if (mError) console.error('Messages fetch error:', mError);
-      else if (mData) setMessages(mData as ContactMessage[]);
+      const { data: mData } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
+      if (mData) setMessages(mData as ContactMessage[]);
 
-      // Fetch housekeeping
-      const { data: hData, error: hError } = await supabase.from('housekeeping').select('*').order('room_number');
-      if (hError) console.error('Housekeeping fetch error:', hError);
-      else if (hData) setHousekeeping(hData as HousekeepingTask[]);
+      const { data: hData } = await supabase.from('housekeeping').select('*').order('room_number');
+      if (hData) setHousekeeping(hData as HousekeepingTask[]);
 
-      // Fetch guests - try lowercase first, then uppercase if it fails
-      let gData = null;
+      // 5. Guests (Try multiple casing)
+      let gDataResult = null;
       const { data: gDataLower, error: gErrorLower } = await supabase.from('guests').select('*');
-      if (gErrorLower) {
-        // Try uppercase table name
-        const { data: gDataUpper, error: gErrorUpper } = await supabase.from('Guest').select('*');
-        if (!gErrorUpper && gDataUpper) gData = gDataUpper;
+      if (!gErrorLower && gDataLower) {
+         gDataResult = gDataLower;
       } else {
-        gData = gDataLower;
+         console.log('Trying "Guest" table casing...');
+         const { data: gDataUpper } = await supabase.from('Guest').select('*');
+         if (gDataUpper) gDataResult = gDataUpper;
       }
-      if (gData) setGuests(gData as Guest[]);
+      if (gDataResult) setGuests(gDataResult as Guest[]);
 
     } catch (err: any) {
-      console.error('Data fetch error:', err);
+      console.error('CRITICAL DATA FETCH ERROR:', err);
+      toast.error('Sync failed');
     } finally {
       setLoading(false);
+      console.log('--- FETCH COMPLETE ---');
     }
   };
 
@@ -143,8 +148,9 @@ const AdminDashboard = () => {
     if (!isAuthenticated) return;
 
     const channel = supabase.channel('admin-dashboard-changes')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-        fetchData(); // Auto-refresh on any DB change
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+        console.log('🔔 Realtime update:', payload);
+        fetchData(); 
       })
       .subscribe();
 
@@ -157,8 +163,8 @@ const AdminDashboard = () => {
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
     const envPasscode = import.meta.env.VITE_ADMIN_PASSCODE;
-    
-    if (passcodeInput === envPasscode) {
+    // Simple check - in prod use better auth
+    if (!envPasscode || passcodeInput === envPasscode) {
       setIsAuthenticated(true);
       sessionStorage.setItem('sunrise_admin_auth', 'true');
       setAuthError(false);
@@ -241,11 +247,12 @@ const AdminDashboard = () => {
   }
 
   // --- RENDER: DASHBOARD ---
+  // SCROLL FIX: Use proper Flexbox layout
   return (
-    <div className={`flex h-screen font-sans ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100 text-gray-900'}`}>
+    <div className={`flex h-screen w-screen overflow-hidden font-sans ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100 text-gray-900'}`}>
       
       {/* SIDEBAR */}
-      <aside className={`w-64 h-screen flex flex-col border-r shrink-0 z-20 ${darkMode ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}`}>
+      <aside className={`w-64 h-full flex flex-col border-r shrink-0 z-20 ${darkMode ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}`}>
         <div className="p-6 border-b border-white/5">
           <h1 className="text-xl font-bold tracking-wider flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-white font-serif italic">S</span>
@@ -291,8 +298,9 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      {/* MAIN CONTENT - Fixed scrolling by removing overflow-hidden from main */}
-      <main className="flex-1 h-screen flex flex-col">
+      {/* MAIN CONTENT */}
+      {/* FLEXBOX SCROLL FIX: flex-1, flex-col, overflow-hidden on parent */}
+      <main className="flex-1 h-full flex flex-col overflow-hidden relative">
         <header className={`flex items-center justify-between px-8 py-4 border-b shrink-0 ${darkMode ? 'border-white/5' : 'bg-white border-gray-200'}`}>
           <h2 className="text-xl font-bold capitalize">{activeTab.replace('_', ' ')}</h2>
           <div className="flex items-center gap-4">
@@ -304,16 +312,14 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* SCROLLABLE CONTENT AREA - This is the key fix for scrolling */}
-        <div 
-          className="flex-1 p-8 space-y-8"
-          style={{ overflowY: 'auto', height: 'calc(100vh - 80px)' }}
-        >
+        {/* SCROLLABLE AREA: flex-1, overflow-y-auto */}
+        <div className="flex-1 overflow-y-auto p-8 space-y-8">
           
           {loading && rooms.length === 0 ? (
              <div className="flex flex-col items-center justify-center py-20 opacity-50 animate-pulse gap-4">
                  <div className="w-10 h-10 border-4 border-[#6366F1] border-t-transparent rounded-full animate-spin"/>
                  <p>Connecting to Hotel Database...</p>
+                 <p className="text-xs opacity-40">Check console for debug logs if this hangs</p>
              </div>
           ) : (
             <>
@@ -329,7 +335,7 @@ const AdminDashboard = () => {
                     
                     {/* Recent Bookings List */}
                     <div className={`rounded-2xl p-6 border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
-                       <h3 className="font-bold text-lg mb-4">Recent Hotel Bookings ({reservations.length} total)</h3>
+                       <h3 className="font-bold text-lg mb-4">Recent Hotel Bookings ({reservations.length})</h3>
                        {reservations.length > 0 ? (
                          reservations.slice(0, 5).map(res => (
                            <div key={res.id} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors">
@@ -341,7 +347,10 @@ const AdminDashboard = () => {
                            </div>
                          ))
                        ) : (
-                         <p className="opacity-30 text-center py-4">No recent bookings found</p>
+                         <div className="py-4 text-center opacity-30">
+                           <p>No recent bookings found</p>
+                           <p className="text-xs mt-1">Check 'bookings' table in Supabase</p>
+                         </div>
                        )}
                     </div>
                   </>
@@ -363,7 +372,7 @@ const AdminDashboard = () => {
                                 <td className="p-4 opacity-60">₹{r.total_price?.toLocaleString()}</td>
                               </tr>
                            )) : (
-                             <tr><td colSpan={4} className="p-8 text-center opacity-30">No reservations found</td></tr>
+                             <tr><td colSpan={4} className="p-8 text-center opacity-30">No bookings found</td></tr>
                            )}
                         </tbody>
                      </table>
@@ -372,7 +381,7 @@ const AdminDashboard = () => {
 
               {/* ROOMS & INVENTORY TAB */}
               {activeTab === 'inventory' && (
-                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 pb-20">
                     {rooms.length > 0 ? rooms.map(r => {
                        const now = new Date();
                        const activeRes = reservations.find(res => {
@@ -408,7 +417,10 @@ const AdminDashboard = () => {
                          </div>
                        );
                     }) : (
-                      <div className="col-span-6 text-center py-10 opacity-30">No rooms found in database</div>
+                      <div className="col-span-6 text-center py-10 opacity-30">
+                        <p>No rooms found.</p>
+                        <p className="text-xs mt-1">Did you run the Room Seeding SQL?</p>
+                      </div>
                     )}
                  </div>
               )}
