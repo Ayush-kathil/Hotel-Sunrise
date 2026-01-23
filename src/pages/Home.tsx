@@ -83,9 +83,7 @@ const HomeMobile = () => {
 
                  {/* Events Card */}
                  <Link to="/events" className="h-56 rounded-[2.5rem] relative overflow-hidden group col-span-1 border border-zinc-100 bg-white shadow-lg">
-                    <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80">
-                         <source src="/events.mp4" type="video/mp4" />
-                    </video>
+                    <img src="https://images.unsplash.com/photo-1647249893022-9287c83b8cc3?q=80&w=803&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Events" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-5 left-5 text-white">
                        <h3 className="text-xl font-serif font-bold">Events</h3>
