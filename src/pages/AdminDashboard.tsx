@@ -82,7 +82,7 @@ const AdminDashboard = () => {
           return {
             ...b,
             profiles: profile 
-              ? { full_name: profile.full_name, mobile_number: profile.mobile_number || b.mobile_number } 
+              ? { full_name: profile.full_name, mobile_number: b.mobile_number } 
               : { full_name: b.guest_name || 'Guest', mobile_number: b.mobile_number }
           };
         });
@@ -390,11 +390,18 @@ const AdminDashboard = () => {
                        const now = new Date();
                        const activeRes = reservations.find(res => {
                            if (String(res.room_number) !== String(r.room_number)) return false;
+                           
+                           // Debugging specific room
+                           console.log(`Checking Room ${r.room_number}:`, res);
+                           
                            const checkIn = new Date(res.check_in);
                            const checkOut = new Date(res.check_out);
                            checkIn.setHours(0,0,0,0);
                            checkOut.setHours(23,59,59,999);
-                           return now.getTime() >= checkIn.getTime() && now.getTime() <= checkOut.getTime();
+                           
+                           const isMatch = now.getTime() >= checkIn.getTime() && now.getTime() <= checkOut.getTime();
+                           console.log(`  Now: ${now.toLocaleDateString()} vs Range: ${checkIn.toLocaleDateString()} - ${checkOut.toLocaleDateString()} => Match: ${isMatch}`);
+                           return isMatch;
                        });
 
                        const isOccupied = !!activeRes;
