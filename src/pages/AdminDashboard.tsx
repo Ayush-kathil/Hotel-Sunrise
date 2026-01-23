@@ -42,17 +42,18 @@ const AdminDashboard = () => {
       setLoading(true);
       
       const { data: rData } = await supabase.from('rooms').select('*').order('room_number');
-      const { data: bData } = await supabase.from('bookings').select('*, profiles(full_name, mobile_number)').order('created_at', { ascending: false });
+      const { data: bData } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
+      const { data: pData } = await supabase.from('profiles').select('id, full_name, mobile_number');
+      
       const { data: nData } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
       
-      // New Tables
+      // ... (other fetches)
       const { data: dData } = await supabase.from('dining_reservations').select('*').order('date', { ascending: true });
       const { data: eData } = await supabase.from('event_inquiries').select('*').order('created_at', { ascending: false });
       const { data: mData } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
       const { data: hData } = await supabase.from('housekeeping').select('*');
       
       const { data: guestTableData } = await supabase.from('Guest').select('*');
-      
       const finalGuests = guestTableData || [];
 
       if (rData) {
@@ -60,7 +61,17 @@ const AdminDashboard = () => {
         setStats(prev => ({ ...prev, availableRooms: rData.filter((r: any) => r.status === 'available').length }));
       }
       if (bData) {
-        setReservations(bData as any);
+        // Manual Join
+        const joinedBookings = bData.map((b: any) => {
+           const profile = pData?.find((p: any) => p.id === b.user_id);
+           return {
+             ...b,
+             profiles: profile ? { full_name: profile.full_name, mobile_number: profile.mobile_number || b.mobile_number } : { full_name: 'Guest', mobile_number: b.mobile_number }
+           };
+        });
+
+        setReservations(joinedBookings);
+        
         const today = new Date().toDateString();
         setStats(prev => ({
           ...prev,
@@ -111,10 +122,13 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteNotification = async (id: number) => {
-    const { error } = await supabase.from('notifications').delete().eq('id', id);
-    if (!error) {
+    try {
+      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      if (error) throw error;
       setNotifications(prev => prev.filter(n => n.id !== id));
       toast.success('Removed');
+    } catch(err: any) {
+      toast.error('Delete failed', { description: err.message });
     }
   };
 
@@ -175,7 +189,7 @@ const AdminDashboard = () => {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* HEADER */}
         <header className={`flex items-center justify-between px-8 py-4 border-b shrink-0 ${darkMode ? 'border-white/5' : 'bg-white border-gray-200'}`}>
           <h2 className="text-xl font-bold capitalize">{activeTab.replace('_', ' ')}</h2>
@@ -294,16 +308,23 @@ const AdminDashboard = () => {
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                      <h3 className="font-bold text-lg mb-4">Room Status</h3>
                      <div className="grid grid-cols-4 gap-2">
-                        {rooms.map(r => (
-                           <div key={r.id} className={`p-2 text-center rounded-lg border text-xs flex flex-col items-center justify-center h-16 ${
+                        {rooms.map(r => {
+                          const occupants = reservations.find(res => res.room_number === r.room_number && new Date(res.check_out) > new Date());
+                          return (
+                           <div key={r.id} className={`p-2 text-center rounded-lg border text-xs flex flex-col items-center justify-center h-20 ${
                               r.status === 'available' ? 'border-green-500/20 bg-green-500/5 text-green-500' :
                               r.status === 'occupied' ? 'border-blue-500/20 bg-blue-500/5 text-blue-500' :
                               'border-red-500/20 bg-red-500/5 text-red-500 font-bold'
                            }`}>
                               <span className="text-lg font-bold">{r.room_number}</span>
-                              <span className="text-[9px] opacity-70">{r.status === 'maintenance' ? 'DIRTY' : 'CLEAN'}</span>
+                              <span className="text-[9px] opacity-70 mb-1">{r.status === 'maintenance' ? 'DIRTY' : r.status === 'occupied' ? 'OCCUPIED' : 'CLEAN'}</span>
+                              {r.status === 'occupied' && occupants && (
+                                <span className="text-[8px] opacity-50 block border-t border-blue-500/20 pt-1 w-full truncate">
+                                  Out: {new Date(occupants.check_out).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
+                                </span>
+                              )}
                            </div>
-                        ))}
+                        )})}
                      </div>
                   </div>
                 </div>
@@ -355,7 +376,9 @@ const AdminDashboard = () => {
                  <div className="space-y-4">
                     {messages.map(m => (
                        <div key={m.id} className={`p-6 rounded-2xl border flex gap-6 ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
-                          <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 font-bold text-lg">{m.name[0]}</div>
+                          <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 font-bold text-lg">
+                            {(m.name && m.name.length > 0) ? m.name[0].toUpperCase() : '?'}
+                          </div>
                           <div className="flex-1">
                              <div className="flex justify-between mb-1">
                                 <h4 className="font-bold">{m.subject}</h4>
@@ -382,14 +405,29 @@ const AdminDashboard = () => {
                        <button className="w-full bg-[#6366F1] text-white font-bold py-3 rounded-xl">Push</button>
                      </form>
                    </div>
-                   <div className="lg:col-span-2 space-y-2">
-                      {notifications.map(n => (
-                         <div key={n.id} className={`p-4 rounded-xl border flex justify-between items-center ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white'}`}>
-                            <div><p className="font-bold">{n.title}</p><p className="text-xs opacity-50">{n.message}</p></div>
-                            <button onClick={() => handleDeleteNotification(n.id)} className="opacity-20 hover:opacity-100 hover:text-red-500"><LogOut size={16}/></button>
-                         </div>
-                      ))}
-                   </div>
+                    <div className="lg:col-span-2 space-y-2">
+                       {notifications.map(n => (
+                          <div key={n.id} className={`p-4 rounded-xl border flex justify-between items-center ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white'}`}>
+                             <div>
+                               <p className="font-bold flex items-center gap-2">
+                                 {n.title} 
+                                 <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase ${
+                                   n.type === 'offer' ? 'bg-orange-500/20 text-orange-500' :
+                                   n.type === 'alert' ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'
+                                 }`}>{n.type}</span>
+                               </p>
+                               <p className="text-xs opacity-50">{n.message}</p>
+                             </div>
+                             <button 
+                               onClick={() => handleDeleteNotification(n.id)} 
+                               className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 text-xs font-bold"
+                             >
+                                <LogOut size={14} className="rotate-0" /> Delete
+                             </button>
+                          </div>
+                       ))}
+                       {notifications.length === 0 && <div className="text-center p-8 opacity-30 italic border-2 border-dashed rounded-2xl">No active notifications</div>}
+                    </div>
                  </div>
               )}
 
