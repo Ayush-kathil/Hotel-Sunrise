@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 import { 
   LayoutGrid, Package, Calendar, Megaphone,
   Utensils, Mail, UserCheck, Brush, PartyPopper,
-  LogOut, Moon, Sun, BedDouble, Lock, CheckCircle, AlertCircle
+  LogOut, Moon, Sun, BedDouble, Lock
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -46,7 +46,6 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     try {
       if (!isAuthenticated) return;
-      // setLoading(true); // Don't full reload on updates, handled by initial load
       
       const { data: rData } = await supabase.from('rooms').select('*').order('room_number');
       const { data: bData } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
@@ -119,9 +118,6 @@ const AdminDashboard = () => {
         'postgres_changes',
         { event: '*', schema: 'public' },
         (payload) => {
-          console.log('Realtime change received:', payload);
-          // For simplicity and accuracy effectively ensuring ALL data is fresh, we'll re-fetch.
-          // In a larger app, we'd update specific state arrays optimistically.
           fetchData();
           toast.info(`Update received from ${payload.table}`);
         }
@@ -180,7 +176,6 @@ const AdminDashboard = () => {
       const { error } = await supabase.from('notifications').delete().eq('id', id);
       if (error) throw error;
       toast.success('Removed');
-      // State filtered by realtime or generic fetch logic, but strictly filtering here for instant feedback
       setNotifications(prev => prev.filter(n => n.id !== id));
     } catch(err: any) {
       toast.error('Delete failed', { description: err.message });
@@ -192,14 +187,12 @@ const AdminDashboard = () => {
     return (
       <div className={`flex items-center justify-center h-screen w-full font-sans ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100'}`}>
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20 blur-sm"></div>
-        
         <div className={`relative z-10 p-8 rounded-3xl border backdrop-blur-xl shadow-2xl w-full max-w-md ${darkMode ? 'bg-black/40 border-white/10' : 'bg-white/40 border-white/50'}`}>
            <div className="flex flex-col items-center mb-8">
              <div className="w-16 h-16 rounded-2xl bg-[#6366F1] flex items-center justify-center text-white font-serif italic text-2xl shadow-[0_0_40px_-10px_#6366F1]">S</div>
              <h1 className="mt-6 text-2xl font-bold tracking-wider">Admin Portal</h1>
              <p className="opacity-50 text-sm">Sunrise Hotel & Resort</p>
            </div>
-
            <form onSubmit={handleAuth} className="space-y-4">
              <div className="space-y-2">
                  <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Passcode</label>
@@ -216,10 +209,7 @@ const AdminDashboard = () => {
                  </div>
                  {authError && <p className="text-center text-red-500 text-xs font-bold animate-pulse">Invalid Passcode</p>}
              </div>
-
-             <button className="w-full bg-[#6366F1] hover:bg-[#5558DD] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#6366F1]/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
-               Access Dashboard
-             </button>
+             <button className="w-full bg-[#6366F1] hover:bg-[#5558DD] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#6366F1]/20 transition-all hover:scale-[1.02] active:scale-[0.98]">Access Dashboard</button>
            </form>
         </div>
       </div>
@@ -239,8 +229,7 @@ const AdminDashboard = () => {
           </h1>
         </div>
 
-        <nav className="flex-1 p-4 space-y-8 overflow-y-auto custom-scrollbar">
-          {/* GROUP 1 */}
+        <nav className="flex-1 p-4 space-y-8 overflow-y-auto">
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">Front Desk</p>
             <div className="space-y-1">
@@ -250,8 +239,6 @@ const AdminDashboard = () => {
               <NavItem icon={UserCheck} label="Guest Database" active={activeTab === 'guest_db'} onClick={() => setActiveTab('guest_db')} darkMode={darkMode} />
             </div>
           </div>
-
-          {/* GROUP 2 */}
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">Operations</p>
             <div className="space-y-1">
@@ -260,8 +247,6 @@ const AdminDashboard = () => {
               <NavItem icon={PartyPopper} label="Events" active={activeTab === 'events'} onClick={() => setActiveTab('events')} darkMode={darkMode} />
             </div>
           </div>
-
-          {/* GROUP 3 */}
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">System</p>
             <div className="space-y-1">
@@ -270,7 +255,6 @@ const AdminDashboard = () => {
             </div>
           </div>
         </nav>
-
         <div className="p-4 border-t border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#6366F1] to-[#a855f7]" />
@@ -285,7 +269,6 @@ const AdminDashboard = () => {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-        {/* HEADER */}
         <header className={`flex items-center justify-between px-8 py-4 border-b shrink-0 ${darkMode ? 'border-white/5' : 'bg-white border-gray-200'}`}>
           <h2 className="text-xl font-bold capitalize">{activeTab.replace('_', ' ')}</h2>
           <div className="flex items-center gap-4">
@@ -297,8 +280,7 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        {/* SCROLLABLE AREA */}
-        <div className="flex-1 overflow-y-auto p-8 pb-32 space-y-8 scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-8 pb-32 space-y-8">
           
           {loading && rooms.length === 0 ? (
              <div className="flex flex-col items-center justify-center py-20 opacity-50 animate-pulse gap-4">
@@ -307,7 +289,6 @@ const AdminDashboard = () => {
              </div>
           ) : (
             <>
-              {/* === TAB: OVERVIEW === */}
               {activeTab === 'overview' && (
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -333,9 +314,7 @@ const AdminDashboard = () => {
                   </>
                )}
 
-              {/* === TAB: RESERVATIONS (Guests) === */}
               {activeTab === 'guests' && (
-                  // FIXED: Changed overflow-hidden to overflow-x-auto
                   <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                      <table className="w-full text-sm text-left">
                         <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}><tr><th className="p-4">Guest</th><th className="p-4">Room</th><th className="p-4">Dates</th><th className="p-4">Amount</th></tr></thead>
@@ -353,21 +332,30 @@ const AdminDashboard = () => {
                   </div>
               )}
 
-              {/* === TAB: INVENTORY === */}
               {activeTab === 'inventory' && (
                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {rooms.map(r => (
-                       <div key={r.id} className={`p-4 rounded-xl border text-center transition-all hover:scale-105 ${r.status === 'available' ? 'border-green-500/20 text-green-500 bg-green-500/5' : r.status === 'occupied' ? 'border-blue-500/20 text-blue-500 bg-blue-500/5' : 'border-red-500/20 text-red-500 bg-red-500/5'}`}>
+                    {rooms.map(r => {
+                       const now = new Date();
+                       const activeRes = reservations.find(res => {
+                           const checkIn = new Date(res.check_in);
+                           const checkOut = new Date(res.check_out);
+                           return res.room_number === r.room_number && now >= checkIn && now < checkOut;
+                       });
+
+                       const isOccupied = !!activeRes;
+                       const statusLabel = isOccupied ? 'occupied' : r.status;
+
+                       return (
+                       <div key={r.id} className={`p-4 rounded-xl border text-center transition-all hover:scale-105 ${statusLabel === 'available' ? 'border-green-500/20 text-green-500 bg-green-500/5' : isOccupied ? 'border-yellow-500 text-black bg-yellow-400' : 'border-red-500/20 text-red-500 bg-red-500/5'}`}>
+                          {isOccupied && <p className="text-[9px] font-bold uppercase tracking-wider mb-1 opacity-70">Check Out: {new Date(activeRes!.check_out).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</p>}
                           <h3 className="font-bold text-2xl">{r.room_number}</h3>
-                          <p className="text-[10px] uppercase opacity-60 font-bold tracking-wider mt-1">{r.status}</p>
+                          <p className="text-[10px] uppercase opacity-60 font-bold tracking-wider mt-1">{statusLabel}</p>
                        </div>
-                    ))}
+                    )})}
                  </div>
               )}
 
-              {/* === TAB: GUEST DB === */}
               {activeTab === 'guest_db' && (
-                  // FIXED: Changed overflow-hidden to overflow-x-auto
                  <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <table className="w-full text-sm text-left">
                        <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}><tr><th className="p-4">ID</th><th className="p-4">Name</th><th className="p-4">Contact</th></tr></thead>
@@ -388,15 +376,12 @@ const AdminDashboard = () => {
                  </div>
               )}
 
-              {/* === TAB: HOUSEKEEPING === */}
               {activeTab === 'housekeeping' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Task List */}
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                          <Brush size={18}/> Cleaning Tasks
                     </h3>
-                    {/* FIXED: Removed max-h-[500px] and overflow-y-auto to stop scroll trap */}
                     <div className="space-y-3">
                        {housekeeping.map(task => (
                           <div key={task.id} className={`flex items-center gap-4 p-4 rounded-xl border ${darkMode ? 'bg-[#252525] border-white/5' : 'bg-gray-50 border-gray-200'}`}>
@@ -423,15 +408,11 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                   
-                  {/* Room Status Visualization */}
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                      <h3 className="font-bold text-lg mb-4">Floor Plan Status</h3>
                      <div className="grid grid-cols-4 gap-2">
                         {rooms.map(r => {
-                           const occupants = reservations.find(res => res.room_number === r.room_number && new Date(res.check_out) > new Date());
-                           // Determine housekeeping status from housekeeping table
                            const hpStatus = housekeeping.find(h => h.room_number === r.room_number)?.status || 'clean';
-                           
                            return (
                            <div key={r.id} className={`p-2 text-center rounded-lg border text-xs flex flex-col items-center justify-center h-20 transition-all ${
                               hpStatus === 'dirty' ? 'border-red-500/50 bg-red-500/10 text-red-500' :
@@ -448,9 +429,7 @@ const AdminDashboard = () => {
                 </div>
               )}
 
-              {/* === TAB: DINING === */}
               {activeTab === 'dining' && (
-                 // FIXED: Changed overflow-hidden to overflow-x-auto
                  <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <div className="p-6 border-b border-white/5"><h2 className="font-bold text-lg">Table Reservations</h2></div>
                     <table className="w-full text-sm text-left">
@@ -470,7 +449,6 @@ const AdminDashboard = () => {
                  </div>
               )}
 
-              {/* === TAB: EVENTS === */}
               {activeTab === 'events' && (
                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {events.map(e => (
@@ -490,7 +468,6 @@ const AdminDashboard = () => {
                  </div>
               )}
 
-              {/* === TAB: MESSAGES === */}
               {activeTab === 'messages' && (
                  <div className="space-y-4">
                     {messages.map(m => (
@@ -512,7 +489,6 @@ const AdminDashboard = () => {
                  </div>
               )}
 
-              {/* === TAB: UPDATES === */}
               {activeTab === 'updates' && (
                  <div className="grid lg:grid-cols-3 gap-8">
                    <div className={`lg:col-span-1 p-6 rounded-2xl border h-fit ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
@@ -549,17 +525,14 @@ const AdminDashboard = () => {
                     </div>
                  </div>
               )}
-
             </>
           )}
-
         </div>
       </main>
     </div>
   );
 };
 
-// --- SUB COMPONENTS ---
 const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
   <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-[#6366F1] text-white' : 'opacity-50 hover:opacity-100'}`}>
     <Icon size={18} /> {label}
