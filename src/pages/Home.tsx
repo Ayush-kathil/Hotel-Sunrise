@@ -44,7 +44,7 @@ const HomeMobile = () => {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                <span className="inline-block px-3 py-1 bg-[#d4af37] text-white text-[10px] font-bold uppercase tracking-widest rounded-full mb-4 shadow-lg">5 Star Luxury</span>
                <h1 className="text-6xl font-serif font-bold leading-none mb-2 text-white drop-shadow-lg">Hotel <br/> <span className="text-[#d4af37]">Sunrise</span></h1>
-               <p className="text-white/90 text-lg font-light mb-8 max-w-xs drop-shadow-md">Experience the antigravity of luxury in the heart of Orai.</p>
+               <p className="text-black/90 text-lg font-light mb-8 max-w-xs drop-shadow-md">Experience the antigravity of luxury in the heart of Orai.</p>
                
                <Link to="/booking" className="flex items-center justify-between bg-white text-black px-8 py-5 rounded-[2rem] font-bold w-full active:scale-95 transition-transform group shadow-xl">
                   Book Your Stay <span className="bg-black text-white rounded-full p-2 group-hover:rotate-45 transition-transform"><ArrowRight size={16} /></span>
@@ -84,7 +84,7 @@ const HomeMobile = () => {
                  {/* Events Card */}
                  <Link to="/events" className="h-56 rounded-[2.5rem] relative overflow-hidden group col-span-1 border border-zinc-100 bg-white shadow-lg">
                     <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80">
-                         <source src="https://cdn.pixabay.com/video/2020/05/25/40122-424529686_large.mp4" type="video/mp4" />
+                         <source src="/events.mp4" type="video/mp4" />
                     </video>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-5 left-5 text-white">
@@ -111,17 +111,28 @@ const HomeMobile = () => {
          </div>
       </section>
 
-      {/* 3. Featured Experience (Video) */}
+      {/* 3. Signature Services (Horizontal Scroll) */}
       <section className="px-4 pb-24">
-         <div className="rounded-[2.5rem] overflow-hidden relative h-80 shadow-xl bg-white border border-zinc-100">
-            <div className="absolute inset-0 flex items-center justify-center z-20">
-                 <Play size={48} className="text-white p-3 bg-black/20 backdrop-blur-md rounded-full border border-white/30" />
-            </div>
-             <img src="https://images.unsplash.com/photo-1621293954908-907159247fc8?q=80&w=1470" className="w-full h-full object-cover" alt="Video Placeholder" />
-             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent z-10">
-                 <span className="text-[#d4af37] text-[10px] font-bold uppercase tracking-widest">Cinematic Tour</span>
-                 <h3 className="text-2xl font-serif font-bold mt-1 text-white">The Sunrise Experience</h3>
-             </div>
+         <div className="flex items-center justify-between px-2 mb-6">
+            <h3 className="text-2xl font-serif font-bold text-zinc-900">Signatures</h3>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">Explore All</span>
+         </div>
+
+         <div className="flex gap-4 overflow-x-auto pb-8 -mx-4 px-4 snap-x hide-scrollbar">
+            {[
+               { title: "Wellness and Leisure", img: "https://images.unsplash.com/photo-1672983665896-e02f28d14173?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", tag: "Wellness" },
+               { title: "Private Dining", img: "https://i.pinimg.com/736x/d6/c7/17/d6c7179ec1376c07b5dc143ea3a3965f.jpg", tag: "Culinary" },
+               { title: "Chauffeur", img: "https://i.pinimg.com/736x/68/b9/c2/68b9c2fe5a114be8de36d53873d39041.jpg", tag: "Transport" }
+            ].map((item, i) => (
+               <div key={i} className="min-w-[280px] h-[320px] rounded-[2.5rem] relative overflow-hidden flex-shrink-0 snap-center group shadow-xl border border-zinc-100">
+                  <img src={item.img} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={item.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90" />
+                  <div className="absolute bottom-0 left-0 p-8">
+                     <span className="inline-block px-3 py-1 bg-[#d4af37]/20 backdrop-blur-md border border-[#d4af37]/30 text-[#d4af37] rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">{item.tag}</span>
+                     <h4 className="text-2xl font-serif font-bold text-white">{item.title}</h4>
+                  </div>
+               </div>
+            ))}
          </div>
       </section>
 

@@ -19,13 +19,12 @@ import Profile from './pages/Profile';
 
 // Components
 import Navbar from './components/Navbar';
-// import MobileNav from './components/MobileNav'; // Removed
 import ScrollToTop from './components/ScrollToTop';
 import ScrollProgress from './components/ScrollProgress';
 import SmoothScroll from './components/SmoothScroll';
 import AdminRoute from './components/AdminRoute';
-import ChatBot from './components/ChatBot'; // <--- IMPORT CHATBOT
-import MobileMenuButton from './components/MobileMenuButton'; // <--- IMPORT MOBILE MENU BUTTON
+import ChatBot from './components/ChatBot';
+import MobileMenuButton from './components/MobileMenuButton';
 
 function App() {
   const location = useLocation();
@@ -79,83 +78,67 @@ function App() {
         }}
       /> 
 
-      {/* --- DESKTOP VIEW --- */}
+      {/* --- RESPONSIVE NAVIGATION --- */}
+      {/* Desktop Navbar */}
       <div className="hidden md:block">
         {!isAdminRoute && <Navbar />}
-
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/rooms" element={<Rooms />} />
-          <Route path="/booking" element={<BookingPage />} />
-          <Route path="/dining" element={<Dining />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/terms" element={<Terms />} />
-          
-          {/* SECURE ADMIN ROUTES */}
-          <Route element={<AdminRoute />}>
-             <Route path="/admin" element={<AdminDashboard />} />
-             <Route path="/dashboard" element={<AdminDashboard />} />
-          </Route>
-
-          <Route path="*" element={<NotFound />} />
-        </Routes>
       </div>
-
-      {/* --- MOBILE VIEW --- */}
-      <div className="md:hidden pb-24"> 
+      
+      {/* Mobile Header (Logo only) */}
+      <div className="md:hidden"> 
         {!isAdminRoute && (
           <div className="fixed top-0 w-full p-4 z-50 flex justify-center bg-white/0 backdrop-blur-[2px] pointer-events-none">
              <span className="text-xl font-serif font-bold tracking-widest text-[#d4af37] drop-shadow-sm">SUNRISE</span>
           </div>
         )}
-        
+      </div>
+
+      {/* --- UNIFIED ROUTING WITH TRANSITIONS --- */}
+      <div className="pb-24 md:pb-0"> {/* Mobile padding for bottom nav */}
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
-            <Route path="*" element={
-              <PageWrapper>
-                 <Routes location={location}>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/rooms" element={<Rooms />} />
-                    <Route path="/booking" element={<BookingPage />} />
-                    <Route path="/dining" element={<Dining />} />
-                    <Route path="/events" element={<Events />} />
-                    <Route path="/contact" element={<Contact />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/terms" element={<Terms />} />
-                    
-                    {/* SECURE ADMIN ROUTES (Mobile) */}
-                    <Route element={<AdminRoute />}>
-                       <Route path="/admin" element={<AdminDashboard />} />
-                       <Route path="/dashboard" element={<AdminDashboard />} />
-                    </Route>
+             <Route path="/" element={<PageWrapper><Home /></PageWrapper>} />
+             <Route path="/rooms" element={<PageWrapper><Rooms /></PageWrapper>} />
+             <Route path="/booking" element={<PageWrapper><BookingPage /></PageWrapper>} />
+             <Route path="/dining" element={<PageWrapper><Dining /></PageWrapper>} />
+             <Route path="/events" element={<PageWrapper><Events /></PageWrapper>} />
+             <Route path="/contact" element={<PageWrapper><Contact /></PageWrapper>} />
+             <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+             <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
+             <Route path="/terms" element={<PageWrapper><Terms /></PageWrapper>} />
+             
+             {/* SECURE ADMIN ROUTES */}
+             <Route element={<AdminRoute />}>
+                <Route path="/admin" element={<PageWrapper><AdminDashboard /></PageWrapper>} />
+                <Route path="/dashboard" element={<PageWrapper><AdminDashboard /></PageWrapper>} />
+             </Route>
 
-                    <Route path="*" element={<NotFound />} />
-                 </Routes>
-              </PageWrapper>
-            } />
+             <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
           </Routes>
         </AnimatePresence>
+      </div>
 
+      {/* --- MOBILE BOTTOM MENU --- */}
+      <div className="md:hidden">
         {!isAdminRoute && <MobileMenuButton />}
       </div>
 
-      {/* --- FLOATING CHATBOT (Visible on All Views) --- */}
+      {/* --- FLOATING CHATBOT --- */}
       <ChatBot />
 
     </div>
   );
 }
 
+// OPTIMIZED PAGE TRANSITION
+// Removed heavy 'x' slide which causes layout trashing on mobile.
+// Switched to 'y' fade for a premium, lightweight feel.
 const PageWrapper = ({ children }: { children: React.ReactNode }) => (
   <motion.div
-    initial={{ x: "100%", opacity: 0 }}
-    animate={{ x: 0, opacity: 1 }}
-    exit={{ x: "-20%", opacity: 0 }}
-    transition={{ type: "spring", stiffness: 260, damping: 20 }}
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.3, ease: "easeOut" }}
     className="w-full min-h-screen"
   >
     {children}
