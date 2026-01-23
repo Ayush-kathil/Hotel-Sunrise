@@ -46,29 +46,21 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     if (!isAuthenticated) return;
     
-    console.log('--- STARTING DATA FETCH ---'); // DEBUG
-
     try {
       // 1. Fetch rooms
-      console.log('Fetching rooms...');
       const { data: rData, error: rError } = await supabase.from('rooms').select('*').order('room_number');
       if (rError) {
-        console.error('❌ Rooms fetch error:', rError);
+        console.error('Rooms fetch error:', rError);
         toast.error('Error fetching rooms');
       } else if (rData) {
-        console.log(`✅ Rooms fetched: ${rData.length} items`);
         setRooms(rData as Room[]);
         setStats(prev => ({ ...prev, availableRooms: rData.filter(r => r.status === 'available').length }));
       }
 
       // 2. Fetch bookings
-      console.log('Fetching bookings...');
       const { data: bData, error: bError } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
       if (bError) {
-         console.error('❌ Bookings fetch error:', bError);
-         toast.error('Error fetching bookings');
-      } else {
-         console.log(`✅ Bookings fetched: ${bData?.length || 0} items`);
+         console.error('Bookings fetch error:', bError);
       }
       
       // 3. Fetch profiles (for joining names)
@@ -116,25 +108,20 @@ const AdminDashboard = () => {
 
       // 5. Guests (Fix: Default to 'Guest' as 404 confirmed 'guests' is wrong)
       let gDataResult = null;
-      console.log('Fetching Guest table...');
       const { data: gDataUpper, error: gErrorUpper } = await supabase.from('Guest').select('*');
       
       if (!gErrorUpper && gDataUpper) {
          gDataResult = gDataUpper;
-         console.log('✅ Guest table fetched');
       } else {
-         console.warn('⚠️ Guest table fetch failed, trying lowercase fallback...');
          const { data: gDataLower } = await supabase.from('guests').select('*');
          if (gDataLower) gDataResult = gDataLower;
       }
       if (gDataResult) setGuests(gDataResult as Guest[]);
 
     } catch (err: any) {
-      console.error('CRITICAL DATA FETCH ERROR:', err);
-      toast.error('Sync failed');
+      console.error('Data fetch error:', err);
     } finally {
       setLoading(false);
-      console.log('--- FETCH COMPLETE ---');
     }
   };
 
@@ -317,13 +304,12 @@ const AdminDashboard = () => {
         </header>
 
         {/* SCROLLABLE AREA: flex-1, overflow-y-auto */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+        <div className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth">
           
           {loading && rooms.length === 0 ? (
              <div className="flex flex-col items-center justify-center py-20 opacity-50 animate-pulse gap-4">
                  <div className="w-10 h-10 border-4 border-[#6366F1] border-t-transparent rounded-full animate-spin"/>
                  <p>Connecting to Hotel Database...</p>
-                 <p className="text-xs opacity-40">Check console for debug logs if this hangs</p>
              </div>
           ) : (
             <>
@@ -391,17 +377,12 @@ const AdminDashboard = () => {
                        const activeRes = reservations.find(res => {
                            if (String(res.room_number) !== String(r.room_number)) return false;
                            
-                           // Debugging specific room
-                           console.log(`Checking Room ${r.room_number}:`, res);
-                           
                            const checkIn = new Date(res.check_in);
                            const checkOut = new Date(res.check_out);
                            checkIn.setHours(0,0,0,0);
                            checkOut.setHours(23,59,59,999);
                            
-                           const isMatch = now.getTime() >= checkIn.getTime() && now.getTime() <= checkOut.getTime();
-                           console.log(`  Now: ${now.toLocaleDateString()} vs Range: ${checkIn.toLocaleDateString()} - ${checkOut.toLocaleDateString()} => Match: ${isMatch}`);
-                           return isMatch;
+                           return now.getTime() >= checkIn.getTime() && now.getTime() <= checkOut.getTime();
                        });
 
                        const isOccupied = !!activeRes;
