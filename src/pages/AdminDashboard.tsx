@@ -333,13 +333,19 @@ const AdminDashboard = () => {
               )}
 
               {activeTab === 'inventory' && (
-                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 pb-20"> {/* Add padding to grid itself */}
                     {rooms.map(r => {
                        const now = new Date();
                        const activeRes = reservations.find(res => {
+                           // Normalize check-in to start of day
                            const checkIn = new Date(res.check_in);
+                           checkIn.setHours(0,0,0,0);
+                           
+                           // Normalize check-out to END of day (so it stays occupied on checkout day)
                            const checkOut = new Date(res.check_out);
-                           return res.room_number === r.room_number && now >= checkIn && now < checkOut;
+                           checkOut.setHours(23,59,59,999);
+                           
+                           return res.room_number === r.room_number && now >= checkIn && now <= checkOut;
                        });
 
                        const isOccupied = !!activeRes;
