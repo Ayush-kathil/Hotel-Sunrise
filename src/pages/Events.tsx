@@ -137,17 +137,15 @@ const HeroSection = ({ onBook }: { onBook: () => void }) => {
 
   const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.9]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.1]); // Slight scale up for video
 
   return (
-    <section ref={ref} className="h-screen relative overflow-hidden flex items-center justify-center bg-zinc-50">
+    <section ref={ref} className="h-screen relative overflow-hidden flex items-center justify-center bg-zinc-900">
       <motion.div style={{ scale, opacity: useTransform(scrollYProgress, [0, 1], [1, 0.5]) }} className="absolute inset-0 z-0">
-         <img 
-           src="https://novoxinc.com/cdn/shop/articles/novox_7_event_setup_styles_for_hotel_and_mice_hero_image_1024x576px_1024x.jpg?v=1657957442" 
-           className="w-full h-full object-cover opacity-90 grayscale-[20%]"
-           alt="Hero"
-         />
-         <div className="absolute inset-0 bg-black/20" />
+         <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80">
+            <source src="https://videos.pexels.com/video-files/2941128/2941128-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+         </video>
+         <div className="absolute inset-0 bg-black/40" />
       </motion.div>
 
       <motion.div style={{ y, opacity }} className="relative z-10 text-center px-6 max-w-4xl mx-auto">
@@ -155,19 +153,19 @@ const HeroSection = ({ onBook }: { onBook: () => void }) => {
           initial={{ opacity: 0, y: 50 }} 
           animate={{ opacity: 1, y: 0 }} 
           transition={{ duration: 1, ease: "easeOut" }}
-          className="bg-white/60 backdrop-blur-sm p-12 rounded-[3rem] border border-white/40 shadow-xl"
+          className="bg-zinc-900/60 backdrop-blur-md p-12 rounded-[3rem] border border-white/10 shadow-2xl"
         >
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-900/10 bg-white/50 backdrop-blur-md text-xs font-medium text-[#d4af37] tracking-wider uppercase mb-6">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-xs font-medium text-[#d4af37] tracking-wider uppercase mb-6">
             <Sparkles size={12} /> The 2026 Collection
           </span>
-          <h1 className="text-6xl md:text-8xl font-serif font-medium tracking-tighter text-zinc-900 mb-6 drop-shadow-sm">
-            Moments, <br/> <span className="text-zinc-500 italic">Elevated.</span>
+          <h1 className="text-6xl md:text-8xl font-serif font-medium tracking-tighter text-white mb-6 drop-shadow-sm">
+            Moments, <br/> <span className="text-zinc-400 italic">Elevated.</span>
           </h1>
-          <p className="text-lg md:text-xl text-zinc-700 font-light max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-lg md:text-xl text-zinc-300 font-light max-w-2xl mx-auto mb-10 leading-relaxed">
             Discover a curated selection of spaces where architecture meets emotion. 
             Designed for those who seek the extraordinary.
           </p>
-          <button onClick={onBook} className="group relative inline-flex items-center gap-3 px-8 py-4 bg-black text-white rounded-full text-sm font-bold tracking-wide overflow-hidden transition-all hover:bg-[#d4af37] border border-transparent shadow-lg hover:shadow-xl hover:scale-105">
+          <button onClick={onBook} className="group relative inline-flex items-center gap-3 px-8 py-4 bg-[#d4af37] text-black rounded-full text-sm font-bold tracking-wide overflow-hidden transition-all hover:bg-white border border-transparent shadow-lg hover:shadow-xl hover:scale-105">
             <span className="relative z-10">Start Planning</span>
             <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
           </button>

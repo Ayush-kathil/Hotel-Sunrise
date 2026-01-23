@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { MapPin, ArrowRight, Play, Quote, Star } from 'lucide-react';
+import { MapPin, ArrowRight, Play, Quote } from 'lucide-react';
 
 const FadeIn = ({ children, delay = 0, className = "" }: { children: React.ReactNode, delay?: number, className?: string }) => (
   <motion.div
@@ -26,83 +26,102 @@ const Home = () => {
   return isMobile ? <HomeMobile /> : <HomeDesktop />;
 };
 
-// --- MOBILE HOME (NEW) ---
+// --- MOBILE HOME (NEW HUB UI) ---
 const HomeMobile = () => {
   return (
-    <div className="bg-[#fcfbf9] min-h-screen font-sans text-zinc-900 pb-20">
+    <div className="bg-[#0a0a0a] min-h-screen font-sans text-white pb-20 overflow-x-hidden">
       
-      {/* 1. Full Screen Mobile Hero */}
-      <section className="relative h-[85vh] w-full overflow-hidden rounded-b-[3rem] shadow-2xl">
+      {/* 1. Full Screen Video Hero */}
+      <section className="relative h-screen w-full overflow-hidden">
          <div className="absolute inset-0">
-            <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=3540&auto=format&fit=crop" className="w-full h-full object-cover" alt="Luxury Hotel" />
+            <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80">
+                <source src="https://videos.pexels.com/video-files/3205634/3205634-hd_1080_1920_25fps.mp4" type="video/mp4" />
+            </video>
          </div>
-         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
          
-         <div className="absolute bottom-0 left-0 w-full p-8 pb-12 text-white">
+         <div className="absolute bottom-32 left-0 w-full px-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                <span className="inline-block px-3 py-1 bg-[#d4af37] text-black text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">5 Star Luxury</span>
-               <h1 className="text-5xl font-serif font-bold leading-none mb-2">Hotel <br/> Sunrise</h1>
-               <p className="text-white/80 text-lg font-light mb-6">The Antigravity of Luxury</p>
+               <h1 className="text-6xl font-serif font-bold leading-none mb-2">Hotel <br/> <span className="text-[#d4af37]">Sunrise</span></h1>
+               <p className="text-white/80 text-lg font-light mb-8 max-w-xs">Experience the antigravity of luxury in the heart of Orai.</p>
                
-               <Link to="/booking" className="flex items-center gap-3 bg-white text-black px-6 py-4 rounded-full font-bold w-full justify-center active:scale-95 transition-transform">
-                  Book Your Stay <ArrowRight size={18} />
+               <Link to="/booking" className="flex items-center justify-between bg-white text-black px-8 py-5 rounded-[2rem] font-bold w-full active:scale-95 transition-transform group">
+                  Book Your Stay <span className="bg-black text-white rounded-full p-2 group-hover:rotate-45 transition-transform"><ArrowRight size={16} /></span>
                </Link>
             </motion.div>
          </div>
       </section>
 
-      {/* 2. Quick Access Cards */}
-      <section className="py-10 px-6">
-         <h2 className="text-2xl font-serif font-bold mb-6">Explore</h2>
-         <div className="flex gap-4 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden -mx-6 px-6 snap-x">
-             {[
-               { title: "Rooms", img: "https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=3540", link: "/rooms" },
-               { title: "Dining", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=3540", link: "/dining" },
-               { title: "Events", img: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=3540", link: "/events" },
-             ].map((item, i) => (
-                <Link key={i} to={item.link} className="snap-center shrink-0 w-64 h-80 rounded-[2rem] overflow-hidden relative shadow-lg group">
-                   <img src={item.img} className="w-full h-full object-cover" alt={item.title} />
-                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
-                   <div className="absolute bottom-6 left-6 text-white">
-                      <h3 className="text-2xl font-serif font-bold">{item.title}</h3>
-                      <div className="w-8 h-1 bg-[#d4af37] mt-2" />
-                   </div>
-                </Link>
-             ))}
+      {/* 2. The Hub (Navigation) */}
+      <section className="px-4 py-12 relative z-10 -mt-10 rounded-t-[2.5rem] bg-[#0a0a0a] border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+         <h2 className="text-3xl font-serif font-bold mb-8 pl-2">Discover</h2>
+         
+         <div className="grid grid-cols-1 gap-4">
+             {/* Rooms Card */}
+             <Link to="/rooms" className="h-64 rounded-[2.5rem] relative overflow-hidden group">
+                <img src="https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=3540" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Rooms" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
+                <div className="absolute bottom-6 left-6">
+                    <span className="text-xs font-bold text-[#d4af37] uppercase tracking-widest">Accommodations</span>
+                    <h3 className="text-3xl font-serif font-bold mt-1">Suites & Rooms</h3>
+                </div>
+                 <div className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+                    <ArrowRight size={18} className="text-white -rotate-45" />
+                 </div>
+             </Link>
+
+             <div className="grid grid-cols-2 gap-4">
+                 {/* Dining Card */}
+                 <Link to="/dining" className="h-56 rounded-[2.5rem] relative overflow-hidden group col-span-1">
+                    <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=3540" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Dining" />
+                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
+                    <div className="absolute bottom-5 left-5">
+                       <h3 className="text-xl font-serif font-bold">Dining</h3>
+                    </div>
+                 </Link>
+
+                 {/* Events Card */}
+                 <Link to="/events" className="h-56 rounded-[2.5rem] relative overflow-hidden group col-span-1 border border-white/10 bg-zinc-900">
+                    <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-60">
+                         <source src="https://videos.pexels.com/video-files/2941128/2941128-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+                    </video>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                    <div className="absolute bottom-5 left-5">
+                       <h3 className="text-xl font-serif font-bold">Events</h3>
+                    </div>
+                 </Link>
+             </div>
+
+             {/* Profile / Contact Row */}
+             <div className="grid grid-cols-2 gap-4">
+                 <Link to="/profile" className="h-40 rounded-[2.5rem] bg-[#1a1a1a] border border-white/5 flex flex-col justify-center items-center gap-3 active:scale-95 transition-transform">
+                     <div className="w-12 h-12 rounded-full bg-[#d4af37] text-black flex items-center justify-center font-bold text-xl">
+                        <Quote size={20} className="stroke-[3]" />
+                     </div>
+                     <span className="font-bold text-sm tracking-wide">My Profile</span>
+                 </Link>
+                 <Link to="/contact" className="h-40 rounded-[2.5rem] bg-[#1a1a1a] border border-white/5 flex flex-col justify-center items-center gap-3 active:scale-95 transition-transform">
+                     <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center font-bold text-xl">
+                        <MapPin size={20} className="stroke-[3]" />
+                     </div>
+                     <span className="font-bold text-sm tracking-wide">Contact Us</span>
+                 </Link>
+             </div>
          </div>
       </section>
 
-      {/* 3. Featured Experience */}
-      <section className="px-6 mb-12">
-         <div className="glass-black p-6 rounded-[2rem] relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-700" />
-            <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                <div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">Must Try</span>
-                    <h3 className="text-2xl font-serif font-bold mt-1 text-white">Royal Dining</h3>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-[#d4af37]/20 flex items-center justify-center border border-[#d4af37]/50">
-                    <Star size={18} className="text-[#d4af37]" fill="#d4af37" />
-                </div>
-                </div>
-                <p className="text-zinc-400 text-sm mb-6 leading-relaxed">Experience our Michelin-starred chef's tasting menu on the rooftop terrace.</p>
-                <Link to="/dining" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:gap-4 transition-all text-white/90">
-                View Menu <ArrowRight size={14} className="text-[#d4af37]" />
-                </Link>
+      {/* 3. Featured Experience (Video) */}
+      <section className="px-4 pb-24">
+         <div className="rounded-[2.5rem] overflow-hidden relative h-80 shadow-2xl bg-zinc-900 border border-white/10">
+            <div className="absolute inset-0 flex items-center justify-center">
+                 <Play size={48} className="text-white/80 p-3 bg-white/10 backdrop-blur-md rounded-full border border-white/20" />
             </div>
-         </div>
-      </section>
-
-      {/* 4. Map / Location */}
-      <section className="px-6 pb-12">
-         <div className="h-48 rounded-[2rem] overflow-hidden relative shadow-lg">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3559.0123456789!2d79.4500!3d25.9900!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39987979264426b3%3A0xc3f8e815668b422!2sOrai%2C%20Uttar%20Pradesh" className="w-full h-full border-0 filter grayscale invert opacity-80" loading="lazy"></iframe>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-               <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                  <MapPin size={14} /> <span className="text-xs font-bold">Orai, UP</span>
-               </div>
-            </div>
+             <img src="https://images.unsplash.com/photo-1621293954908-907159247fc8?q=80&w=1470" className="w-full h-full object-cover opacity-60" alt="Video Placeholder" />
+             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black to-transparent">
+                 <span className="text-[#d4af37] text-[10px] font-bold uppercase tracking-widest">Cinematic Tour</span>
+                 <h3 className="text-2xl font-serif font-bold mt-1">The Sunrise Experience</h3>
+             </div>
          </div>
       </section>
 

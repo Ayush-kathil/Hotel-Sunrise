@@ -19,12 +19,13 @@ import Profile from './pages/Profile';
 
 // Components
 import Navbar from './components/Navbar';
-import MobileNav from './components/MobileNav';
+// import MobileNav from './components/MobileNav'; // Removed
 import ScrollToTop from './components/ScrollToTop';
 import ScrollProgress from './components/ScrollProgress';
 import SmoothScroll from './components/SmoothScroll';
 import AdminRoute from './components/AdminRoute';
 import ChatBot from './components/ChatBot'; // <--- IMPORT CHATBOT
+import MobileMenuButton from './components/MobileMenuButton'; // <--- IMPORT MOBILE MENU BUTTON
 
 function App() {
   const location = useLocation();
@@ -139,7 +140,7 @@ function App() {
           </Routes>
         </AnimatePresence>
 
-        {!isAdminRoute && <MobileNav />}
+        {!isAdminRoute && <MobileMenuButton />}
       </div>
 
       {/* --- FLOATING CHATBOT (Visible on All Views) --- */}

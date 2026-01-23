@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import DatePicker from 'react-datepicker';
@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { toast } from 'sonner';
 import { CreditCard, Calendar as CalIcon, User, AlertTriangle, ArrowLeft, Wifi, Coffee, Tv, Wind } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 
 const BookingPage = () => {
   const location = useLocation();
@@ -19,6 +19,10 @@ const BookingPage = () => {
   const [guestName, setGuestName] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  
+  const containerRef = useRef(null);
+  const { scrollYProgress } = useScroll({ target: containerRef });
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
 
   useEffect(() => {
     // 1. Redirect if no room selected
@@ -67,20 +71,16 @@ const BookingPage = () => {
       }
 
       // 2. Ensure Profile Exists (Fix for FK Error)
-      // Sometimes triggers fail or don't exist, so we ensure the profile row exists before referencing it.
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
-          // Only update basic info if creating/updating
           full_name: guestName || 'Guest',
-          // email: user.email // optional, depends on schema
         }, { onConflict: 'id' })
         .select();
 
       if (profileError) {
          console.warn("Profile Upsert Warning:", profileError);
-         // We continue, hoping the row exists or error is RLS related but row is there.
       }
 
       // 3. Insert Booking
@@ -133,48 +133,81 @@ const BookingPage = () => {
   if (!room) return null;
 
   return (
-    <div className="min-h-screen bg-[#fcfbf9] font-sans text-zinc-900 pb-20">
+    <div ref={containerRef} className="min-h-screen bg-[#0a0a0a] font-sans text-white pb-20 selection:bg-[#d4af37] selection:text-black">
       
-      {/* 1. HERO SECTION (Room Description) */}
-      <div className="relative h-[50vh] min-h-[400px]">
-         <div className="absolute inset-0 bg-black/40 z-10" />
-         <img src={room.image || "https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80"} alt={room.name} className="w-full h-full object-cover" />
+      {/* 1. HERO SECTION (Video) */}
+      <section className="relative h-[60vh] md:h-[70vh] w-full overflow-hidden">
+         <motion.div style={{ scale: heroScale }} className="absolute inset-0">
+             <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80">
+                <source src={room.video || "https://videos.pexels.com/video-files/7043869/7043869-uhd_2560_1440_30fps.mp4"} type="video/mp4" />
+             </video>
+         </motion.div>
+         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-black/30 to-black/60" />
          
+         {/* Navigation Back */}
          <div className="absolute top-0 left-0 w-full p-6 z-20 pt-24">
-            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/80 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-4 py-2 rounded-full w-fit">
-               <ArrowLeft size={18} /> Back
+            <button onClick={() => navigate(-1)} className="group flex items-center gap-2 text-white/80 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-4 py-2 rounded-full w-fit hover:bg-[#d4af37] hover:text-black">
+               <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Back
             </button>
          </div>
 
-         <div className="absolute bottom-0 left-0 w-full p-6 z-20 bg-gradient-to-t from-black/90 to-transparent pt-32">
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="max-w-6xl mx-auto">
-                <span className="text-[#d4af37] font-bold tracking-widest uppercase text-xs mb-2 block">Luxury Collection</span>
-                <h1 className="text-4xl md:text-6xl font-serif font-bold text-white mb-4">{room.name}</h1>
-                <div className="flex gap-6 text-white/80 text-sm overflow-x-auto pb-2 no-scrollbar">
-                   <div className="flex items-center gap-2"><Wifi size={16} /> Free Wifi</div>
-                   <div className="flex items-center gap-2"><Wind size={16} /> AC</div>
-                   <div className="flex items-center gap-2"><Coffee size={16} /> Breakfast</div>
-                   <div className="flex items-center gap-2"><Tv size={16} /> Smart TV</div>
-                </div>
-            </motion.div>
+         <div className="absolute bottom-0 left-0 w-full p-6 md:p-12 z-20">
+             <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="max-w-6xl mx-auto">
+                 <span className="text-[#d4af37] px-3 py-1 rounded-full border border-[#d4af37]/30 bg-black/40 backdrop-blur-md font-bold tracking-widest uppercase text-[10px] mb-4 inline-block shadow-[0_0_20px_rgba(212,175,55,0.2)]">Luxury Collection</span>
+                 <h1 className="text-5xl md:text-8xl font-serif font-bold text-white mb-6 drop-shadow-2xl">{room.name}</h1>
+             </motion.div>
          </div>
-      </div>
+      </section>
 
-      {/* 2. BOOKING SECTION */}
-      <div className="max-w-6xl mx-auto px-4 -mt-10 relative z-30 grid lg:grid-cols-12 gap-8">
+      {/* 2. DESCRIPTION & AMENITIES */}
+      <section className="max-w-6xl mx-auto px-6 py-16 grid lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-8">
+             <h2 className="text-3xl font-serif text-[#d4af37] mb-6">Experience Unmatched Comfort</h2>
+             <p className="text-zinc-400 text-lg leading-relaxed font-light mb-8">
+                 Immerse yourself in a sanctuary of tranquility. Every detail of the {room.name} has been meticulously crafted to provide an unforgettable stay. 
+                 From the panoramic views to the bespoke furniture, indulge in a world where luxury knows no bounds.
+             </p>
+             
+             <h3 className="text-xl font-bold mb-6">Amenity Highlights</h3>
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                 {[
+                    { icon: <Wifi size={20} />, label: "High-Speed Wifi" },
+                    { icon: <Wind size={20} />, label: "Climate Control" },
+                    { icon: <Coffee size={20} />, label: "Gourmet Breakfast" },
+                    { icon: <Tv size={20} />, label: "Smart Entertainment" }
+                 ].map((item, i) => (
+                    <div key={i} className="bg-zinc-900 border border-white/5 p-4 rounded-2xl flex flex-col items-center gap-3 text-center hover:border-[#d4af37]/50 transition-colors group">
+                        <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-[#d4af37] group-hover:scale-110 transition-transform">{item.icon}</div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{item.label}</span>
+                    </div>
+                 ))}
+             </div>
+          </div>
+          
+          <div className="lg:col-span-4 flex items-center">
+              <div className="w-full bg-zinc-900/50 p-6 rounded-3xl border-l-[1px] border-[#d4af37]">
+                  <p className="font-serif italic text-zinc-300 text-lg">"The perfect blend of modern elegance and timeless hospitality. A stay here isn't just a visit; it's a memory crafted."</p>
+              </div>
+          </div>
+      </section>
+
+      {/* 3. BOOKING INTERFACE */}
+      <div className="max-w-6xl mx-auto px-4 relative z-30 grid lg:grid-cols-12 gap-8 mb-20">
          
          {/* Left: Calendar */}
          <motion.div initial={{ y: 40, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} className="lg:col-span-7">
-            <div className="bg-white p-6 md:p-8 rounded-[2rem] shadow-xl border border-zinc-100">
-               <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-zinc-50 rounded-full flex items-center justify-center text-[#d4af37]"><CalIcon size={24} /></div>
+            <div className="bg-zinc-900 p-6 md:p-10 rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-[#d4af37] rounded-full blur-[120px] opacity-10 pointer-events-none" />
+               
+               <div className="relative z-10 flex items-center gap-4 mb-8">
+                  <div className="w-14 h-14 bg-black rounded-full flex items-center justify-center text-[#d4af37] border border-white/10"><CalIcon size={24} /></div>
                   <div>
-                    <h3 className="font-bold text-xl">Select Dates</h3>
+                    <h3 className="font-bold text-2xl text-white">Select Dates</h3>
                     <p className="text-zinc-500 text-sm">Tap start date, then end date.</p>
                   </div>
                </div>
                
-               <div className="flex justify-center bg-zinc-50/50 rounded-3xl p-4">
+               <div className="flex justify-center bg-black/40 rounded-3xl p-6 border border-white/5">
                  <DatePicker 
                     selected={startDate} 
                     onChange={(update) => setDateRange(update)} 
@@ -184,14 +217,17 @@ const BookingPage = () => {
                     inline 
                     monthsShown={window.innerWidth > 768 ? 2 : 1} // Responsive Calendar
                     minDate={new Date()} 
-                    calendarClassName="!border-0 !font-sans !bg-transparent" 
+                    calendarClassName="!border-0 !font-sans !bg-transparent text-white" 
                  />
                </div>
                <style>{`
                   .react-datepicker__header { background: transparent; border: none; }
-                  .react-datepicker__day--selected, .react-datepicker__day--in-range { background-color: #d4af37 !important; color: black !important; font-weight: bold; border-radius: 50%; }
-                  .react-datepicker__day:hover { background-color: #f4f4f5; border-radius: 50%; }
-                  .react-datepicker__day-name { color: #a1a1aa; font-weight: bold; }
+                  .react-datepicker__current-month { color: white !important; font-family: serif; font-size: 1.2rem; margin-bottom: 1rem; }
+                  .react-datepicker__day-name { color: #52525b !important; font-weight: bold; }
+                  .react-datepicker__day { color: #d4d4d8 !important; }
+                  .react-datepicker__day:hover { background-color: #27272a !important; border-radius: 50%; color: white !important; }
+                  .react-datepicker__day--selected, .react-datepicker__day--in-range { background-color: #d4af37 !important; color: black !important; font-weight: bold; border-radius: 50%; box-shadow: 0 0 15px rgba(212,175,55,0.4); }
+                  .react-datepicker__day--disabled { color: #3f3f46 !important; }
                `}</style>
             </div>
          </motion.div>
@@ -199,34 +235,36 @@ const BookingPage = () => {
          {/* Right: Checkout Card */}
          <motion.div initial={{ y: 40, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="lg:col-span-5 relative">
             <div className="sticky top-24">
-              <div className="bg-[#0a0a0a] text-white p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl ring-4 ring-black/5">
+              <div className="bg-black text-white p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl border border-white/10">
                  {/* Gold Glow Effect */}
-                 <div className="absolute -top-32 -right-32 w-80 h-80 bg-[#d4af37] rounded-full blur-[100px] opacity-20" />
+                 <div className="absolute -top-32 -right-32 w-80 h-80 bg-[#d4af37] rounded-full blur-[100px] opacity-15" />
                  
-                 <h2 className="text-2xl font-serif font-bold mb-8 relative z-10">Reservation Summary</h2>
+                 <h2 className="text-2xl font-serif font-bold mb-8 relative z-10 flex items-center gap-3">
+                    <span className="w-1 h-8 bg-[#d4af37] rounded-full" /> Reservation
+                 </h2>
                  
                  <div className="space-y-6 relative z-10">
                     <div>
                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Guest Name</label>
-                       <div className="relative bg-white/10 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#d4af37] transition-all">
-                          <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
-                          <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Full Name" className="w-full bg-transparent border-none py-4 pl-12 pr-4 text-white focus:outline-none placeholder:text-zinc-600" />
+                       <div className="relative bg-white/5 rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-[#d4af37] transition-all border border-white/5">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                          <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Full Name" className="w-full bg-transparent border-none py-4 pl-12 pr-4 text-white focus:outline-none placeholder:text-zinc-700" />
                        </div>
                     </div>
 
-                    <div className="border-t border-white/10 pt-6 space-y-3">
+                    <div className="bg-white/5 rounded-2xl p-6 border border-white/5 space-y-4">
                         <div className="flex justify-between text-sm text-zinc-400">
-                           <span>Price per night</span>
-                           <span>₹{room.price.toLocaleString()}</span>
+                           <span>Price / Night</span>
+                           <span className="text-white">₹{room.price.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-sm text-zinc-400">
                            <span>Duration</span>
-                           <span>{nights} Nights</span>
+                           <span className="text-white">{nights} Nights</span>
                         </div>
-                        <div className="h-px bg-white/10 my-2" />
-                        <div className="flex justify-between items-center">
-                           <span className="text-lg font-bold">Total Pay</span>
-                           <span className="text-2xl font-serif font-bold text-[#d4af37]">₹{totalPrice.toLocaleString()}</span>
+                        <div className="h-px bg-white/10 my-1" />
+                        <div className="flex justify-between items-end">
+                           <span className="text-zinc-500 font-bold text-xs uppercase tracking-widest">Total</span>
+                           <span className="text-3xl font-serif font-bold text-[#d4af37]">₹{totalPrice.toLocaleString()}</span>
                         </div>
                     </div>
                  </div>
@@ -234,9 +272,9 @@ const BookingPage = () => {
                  <button 
                     onClick={handlePayment} 
                     disabled={loading || !nights || !guestName} 
-                    className="w-full mt-8 py-5 bg-[#d4af37] text-black font-bold text-lg rounded-2xl hover:bg-white transition-all flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_40px_rgba(212,175,55,0.3)] relative z-10"
+                    className="w-full mt-8 py-5 bg-[#d4af37] text-black font-bold text-lg rounded-2xl hover:bg-white transition-all flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_40px_rgba(212,175,55,0.3)] relative z-10 group"
                  >
-                    {loading ? <span className="animate-pulse">Processing...</span> : <><CreditCard size={20} /> Confirm Booking</>}
+                    {loading ? <span className="animate-pulse">Processing...</span> : <><CreditCard size={20} className="group-hover:scale-110 transition-transform" /> Confirm Booking</>}
                  </button>
               </div>
             </div>
@@ -246,5 +284,4 @@ const BookingPage = () => {
     </div>
   );
 };
-
 export default BookingPage;
