@@ -273,7 +273,7 @@ const AdminDashboard = () => {
                )}
 
               {activeTab === 'guests' && (
-                  <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
+                  <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                      <table className="w-full text-sm text-left">
                         <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}><tr><th className="p-4">Guest</th><th className="p-4">Room</th><th className="p-4">Dates</th><th className="p-4">Amount</th></tr></thead>
                         <tbody className="divide-y divide-white/5">
@@ -298,7 +298,7 @@ const AdminDashboard = () => {
                        const reservation = occupied ? reservations.find(res => res.room_number === r.room_number && new Date(res.check_out) >= new Date()) : null;
 
                        return (
-                          <div key={r.id} className={`p-6 rounded-xl border text-center transition-all hover:scale-105 flex flex-col justify-center min-h-[140px] relative overflow-hidden ${
+                          <div key={r.id} className={`p-6 rounded-xl border text-center transition-all hover:scale-105 flex flex-col justify-center min-h-[140px] relative overflow-x-auto ${
                              occupied ? 'bg-yellow-500 border-yellow-600 text-black shadow-lg shadow-yellow-500/20' : 
                              maintenance ? 'border-red-500/20 text-red-500 bg-red-500/5' : 
                              'border-green-500/20 text-green-500 bg-green-500/5'
@@ -323,7 +323,7 @@ const AdminDashboard = () => {
               )}
 
               {activeTab === 'guest_db' && (
-                 <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
+                 <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <table className="w-full text-sm text-left">
                        <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}><tr><th className="p-4">ID</th><th className="p-4">Name</th><th className="p-4">Contact</th></tr></thead>
                        <tbody className="divide-y divide-white/5">
@@ -346,7 +346,7 @@ const AdminDashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <h3 className="font-bold text-lg mb-4 flex items-center gap-2"> <Brush size={18}/> Cleaning Tasks </h3>
-                    <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
                        {housekeeping.map(task => (
                           <div key={task.id} className={`flex items-center gap-4 p-4 rounded-xl border ${darkMode ? 'bg-[#252525] border-white/5' : 'bg-gray-50 border-gray-200'}`}>
                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
@@ -391,7 +391,7 @@ const AdminDashboard = () => {
               )}
 
               {activeTab === 'dining' && (
-                 <div className={`rounded-2xl border overflow-hidden ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
+                 <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <div className="p-6 border-b border-white/5"><h2 className="font-bold text-lg">Table Reservations</h2></div>
                     <table className="w-full text-sm text-left">
                        <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}><tr><th className="p-4">Name</th><th className="p-4">Date & Time</th><th className="p-4">Guests</th><th className="p-4">Status</th></tr></thead>
