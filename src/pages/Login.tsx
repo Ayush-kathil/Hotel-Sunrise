@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { Lock, ArrowRight, Loader2, ShieldCheck, Chrome, Mail, Key } from 'lucide-react';
+import { ArrowRight, Loader2, ShieldCheck, Chrome, Mail, Key } from 'lucide-react';
 import { Turnstile } from '@marsidev/react-turnstile';
 
 const Login = () => {
