@@ -29,24 +29,24 @@ const Home = () => {
 // --- MOBILE HOME (NEW HUB UI) ---
 const HomeMobile = () => {
   return (
-    <div className="bg-[#0a0a0a] min-h-screen font-sans text-white pb-20 overflow-x-hidden">
+    <div className="bg-[#fcfbf9] min-h-screen font-sans text-zinc-900 pb-20 overflow-x-hidden">
       
       {/* 1. Full Screen Video Hero */}
       <section className="relative h-screen w-full overflow-hidden">
          <div className="absolute inset-0">
-            <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80">
-                <source src="https://videos.pexels.com/video-files/3205634/3205634-hd_1080_1920_25fps.mp4" type="video/mp4" />
+            <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-90">
+                <source src="https://www.pexels.com/video/maid-pushing-room-service-trolley-6466350/" type="video/mp4" />
             </video>
          </div>
-         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+         <div className="absolute inset-0 bg-gradient-to-t from-[#fcfbf9] via-transparent to-transparent" />
          
          <div className="absolute bottom-32 left-0 w-full px-6">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-               <span className="inline-block px-3 py-1 bg-[#d4af37] text-black text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">5 Star Luxury</span>
-               <h1 className="text-6xl font-serif font-bold leading-none mb-2">Hotel <br/> <span className="text-[#d4af37]">Sunrise</span></h1>
-               <p className="text-white/80 text-lg font-light mb-8 max-w-xs">Experience the antigravity of luxury in the heart of Orai.</p>
+               <span className="inline-block px-3 py-1 bg-[#d4af37] text-white text-[10px] font-bold uppercase tracking-widest rounded-full mb-4 shadow-lg">5 Star Luxury</span>
+               <h1 className="text-6xl font-serif font-bold leading-none mb-2 text-white drop-shadow-lg">Hotel <br/> <span className="text-[#d4af37]">Sunrise</span></h1>
+               <p className="text-white/90 text-lg font-light mb-8 max-w-xs drop-shadow-md">Experience the antigravity of luxury in the heart of Orai.</p>
                
-               <Link to="/booking" className="flex items-center justify-between bg-white text-black px-8 py-5 rounded-[2rem] font-bold w-full active:scale-95 transition-transform group">
+               <Link to="/booking" className="flex items-center justify-between bg-white text-black px-8 py-5 rounded-[2rem] font-bold w-full active:scale-95 transition-transform group shadow-xl">
                   Book Your Stay <span className="bg-black text-white rounded-full p-2 group-hover:rotate-45 transition-transform"><ArrowRight size={16} /></span>
                </Link>
             </motion.div>
@@ -54,40 +54,40 @@ const HomeMobile = () => {
       </section>
 
       {/* 2. The Hub (Navigation) */}
-      <section className="px-4 py-12 relative z-10 -mt-10 rounded-t-[2.5rem] bg-[#0a0a0a] border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-         <h2 className="text-3xl font-serif font-bold mb-8 pl-2">Discover</h2>
+      <section className="px-4 py-12 relative z-10 -mt-10 rounded-t-[2.5rem] bg-[#fcfbf9] border-t border-zinc-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+         <h2 className="text-3xl font-serif font-bold mb-8 pl-2 text-zinc-900">Discover</h2>
          
          <div className="grid grid-cols-1 gap-4">
              {/* Rooms Card */}
-             <Link to="/rooms" className="h-64 rounded-[2.5rem] relative overflow-hidden group">
+             <Link to="/rooms" className="h-64 rounded-[2.5rem] relative overflow-hidden group shadow-lg">
                 <img src="https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=3540" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Rooms" />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80" />
-                <div className="absolute bottom-6 left-6">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60" />
+                <div className="absolute bottom-6 left-6 text-white">
                     <span className="text-xs font-bold text-[#d4af37] uppercase tracking-widest">Accommodations</span>
                     <h3 className="text-3xl font-serif font-bold mt-1">Suites & Rooms</h3>
                 </div>
-                 <div className="absolute top-6 right-6 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+                 <div className="absolute top-6 right-6 w-10 h-10 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center border border-white/40">
                     <ArrowRight size={18} className="text-white -rotate-45" />
                  </div>
              </Link>
 
              <div className="grid grid-cols-2 gap-4">
                  {/* Dining Card */}
-                 <Link to="/dining" className="h-56 rounded-[2.5rem] relative overflow-hidden group col-span-1">
+                 <Link to="/dining" className="h-56 rounded-[2.5rem] relative overflow-hidden group col-span-1 shadow-lg">
                     <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=3540" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Dining" />
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
-                    <div className="absolute bottom-5 left-5">
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
+                    <div className="absolute bottom-5 left-5 text-white">
                        <h3 className="text-xl font-serif font-bold">Dining</h3>
                     </div>
                  </Link>
 
                  {/* Events Card */}
-                 <Link to="/events" className="h-56 rounded-[2.5rem] relative overflow-hidden group col-span-1 border border-white/10 bg-zinc-900">
-                    <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-60">
-                         <source src="https://videos.pexels.com/video-files/2941128/2941128-uhd_2560_1440_25fps.mp4" type="video/mp4" />
+                 <Link to="/events" className="h-56 rounded-[2.5rem] relative overflow-hidden group col-span-1 border border-zinc-100 bg-white shadow-lg">
+                    <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80">
+                         <source src="https://cdn.pixabay.com/video/2020/05/25/40122-424529686_large.mp4" type="video/mp4" />
                     </video>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                    <div className="absolute bottom-5 left-5">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-5 left-5 text-white">
                        <h3 className="text-xl font-serif font-bold">Events</h3>
                     </div>
                  </Link>
@@ -95,17 +95,17 @@ const HomeMobile = () => {
 
              {/* Profile / Contact Row */}
              <div className="grid grid-cols-2 gap-4">
-                 <Link to="/profile" className="h-40 rounded-[2.5rem] bg-[#1a1a1a] border border-white/5 flex flex-col justify-center items-center gap-3 active:scale-95 transition-transform">
-                     <div className="w-12 h-12 rounded-full bg-[#d4af37] text-black flex items-center justify-center font-bold text-xl">
+                 <Link to="/profile" className="h-40 rounded-[2.5rem] bg-white border border-zinc-200 flex flex-col justify-center items-center gap-3 active:scale-95 transition-transform shadow-sm hover:shadow-md">
+                     <div className="w-12 h-12 rounded-full bg-[#d4af37] text-white flex items-center justify-center font-bold text-xl shadow-md">
                         <Quote size={20} className="stroke-[3]" />
                      </div>
-                     <span className="font-bold text-sm tracking-wide">My Profile</span>
+                     <span className="font-bold text-sm tracking-wide text-zinc-900">My Profile</span>
                  </Link>
-                 <Link to="/contact" className="h-40 rounded-[2.5rem] bg-[#1a1a1a] border border-white/5 flex flex-col justify-center items-center gap-3 active:scale-95 transition-transform">
-                     <div className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center font-bold text-xl">
+                 <Link to="/contact" className="h-40 rounded-[2.5rem] bg-white border border-zinc-200 flex flex-col justify-center items-center gap-3 active:scale-95 transition-transform shadow-sm hover:shadow-md">
+                     <div className="w-12 h-12 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-xl shadow-md">
                         <MapPin size={20} className="stroke-[3]" />
                      </div>
-                     <span className="font-bold text-sm tracking-wide">Contact Us</span>
+                     <span className="font-bold text-sm tracking-wide text-zinc-900">Contact Us</span>
                  </Link>
              </div>
          </div>
@@ -113,14 +113,14 @@ const HomeMobile = () => {
 
       {/* 3. Featured Experience (Video) */}
       <section className="px-4 pb-24">
-         <div className="rounded-[2.5rem] overflow-hidden relative h-80 shadow-2xl bg-zinc-900 border border-white/10">
-            <div className="absolute inset-0 flex items-center justify-center">
-                 <Play size={48} className="text-white/80 p-3 bg-white/10 backdrop-blur-md rounded-full border border-white/20" />
+         <div className="rounded-[2.5rem] overflow-hidden relative h-80 shadow-xl bg-white border border-zinc-100">
+            <div className="absolute inset-0 flex items-center justify-center z-20">
+                 <Play size={48} className="text-white p-3 bg-black/20 backdrop-blur-md rounded-full border border-white/30" />
             </div>
-             <img src="https://images.unsplash.com/photo-1621293954908-907159247fc8?q=80&w=1470" className="w-full h-full object-cover opacity-60" alt="Video Placeholder" />
-             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black to-transparent">
+             <img src="https://images.unsplash.com/photo-1621293954908-907159247fc8?q=80&w=1470" className="w-full h-full object-cover" alt="Video Placeholder" />
+             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent z-10">
                  <span className="text-[#d4af37] text-[10px] font-bold uppercase tracking-widest">Cinematic Tour</span>
-                 <h3 className="text-2xl font-serif font-bold mt-1">The Sunrise Experience</h3>
+                 <h3 className="text-2xl font-serif font-bold mt-1 text-white">The Sunrise Experience</h3>
              </div>
          </div>
       </section>

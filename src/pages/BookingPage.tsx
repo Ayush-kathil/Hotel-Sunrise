@@ -133,20 +133,20 @@ const BookingPage = () => {
   if (!room) return null;
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-[#0a0a0a] font-sans text-white pb-20 selection:bg-[#d4af37] selection:text-black">
+    <div ref={containerRef} className="min-h-screen bg-[#fcfbf9] font-sans text-zinc-900 pb-20 selection:bg-[#d4af37] selection:text-white">
       
       {/* 1. HERO SECTION (Video) */}
       <section className="relative h-[60vh] md:h-[70vh] w-full overflow-hidden">
          <motion.div style={{ scale: heroScale }} className="absolute inset-0">
-             <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-80">
-                <source src={room.video || "https://videos.pexels.com/video-files/7043869/7043869-uhd_2560_1440_30fps.mp4"} type="video/mp4" />
+             <video autoPlay muted loop playsInline className="w-full h-full object-cover">
+                <source src={room.video || "https://cdn.pixabay.com/video/2017/01/04/7123-198192800_large.mp4"} type="video/mp4" />
              </video>
          </motion.div>
-         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-black/30 to-black/60" />
+         <div className="absolute inset-0 bg-black/20" />
          
          {/* Navigation Back */}
          <div className="absolute top-0 left-0 w-full p-6 z-20 pt-24">
-            <button onClick={() => navigate(-1)} className="group flex items-center gap-2 text-white/80 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-4 py-2 rounded-full w-fit hover:bg-[#d4af37] hover:text-black">
+            <button onClick={() => navigate(-1)} className="group flex items-center gap-2 text-white/90 hover:text-white transition-colors bg-black/20 backdrop-blur-md px-4 py-2 rounded-full w-fit hover:bg-[#d4af37] hover:text-black">
                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" /> Back
             </button>
          </div>
@@ -163,12 +163,12 @@ const BookingPage = () => {
       <section className="max-w-6xl mx-auto px-6 py-16 grid lg:grid-cols-12 gap-12">
           <div className="lg:col-span-8">
              <h2 className="text-3xl font-serif text-[#d4af37] mb-6">Experience Unmatched Comfort</h2>
-             <p className="text-zinc-400 text-lg leading-relaxed font-light mb-8">
+             <p className="text-zinc-600 text-lg leading-relaxed font-light mb-8">
                  Immerse yourself in a sanctuary of tranquility. Every detail of the {room.name} has been meticulously crafted to provide an unforgettable stay. 
                  From the panoramic views to the bespoke furniture, indulge in a world where luxury knows no bounds.
              </p>
              
-             <h3 className="text-xl font-bold mb-6">Amenity Highlights</h3>
+             <h3 className="text-xl font-bold mb-6 text-zinc-900">Amenity Highlights</h3>
              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                  {[
                     { icon: <Wifi size={20} />, label: "High-Speed Wifi" },
@@ -176,17 +176,17 @@ const BookingPage = () => {
                     { icon: <Coffee size={20} />, label: "Gourmet Breakfast" },
                     { icon: <Tv size={20} />, label: "Smart Entertainment" }
                  ].map((item, i) => (
-                    <div key={i} className="bg-zinc-900 border border-white/5 p-4 rounded-2xl flex flex-col items-center gap-3 text-center hover:border-[#d4af37]/50 transition-colors group">
-                        <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-[#d4af37] group-hover:scale-110 transition-transform">{item.icon}</div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{item.label}</span>
+                    <div key={i} className="bg-white border border-zinc-200 p-4 rounded-2xl flex flex-col items-center gap-3 text-center hover:border-[#d4af37] transition-colors group shadow-sm">
+                        <div className="w-10 h-10 rounded-full bg-zinc-50 flex items-center justify-center text-[#d4af37] group-hover:scale-110 transition-transform">{item.icon}</div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">{item.label}</span>
                     </div>
                  ))}
              </div>
           </div>
           
           <div className="lg:col-span-4 flex items-center">
-              <div className="w-full bg-zinc-900/50 p-6 rounded-3xl border-l-[1px] border-[#d4af37]">
-                  <p className="font-serif italic text-zinc-300 text-lg">"The perfect blend of modern elegance and timeless hospitality. A stay here isn't just a visit; it's a memory crafted."</p>
+              <div className="w-full bg-zinc-50 p-6 rounded-3xl border-l-[1px] border-[#d4af37]">
+                  <p className="font-serif italic text-zinc-600 text-lg">"The perfect blend of modern elegance and timeless hospitality. A stay here isn't just a visit; it's a memory crafted."</p>
               </div>
           </div>
       </section>
@@ -196,18 +196,18 @@ const BookingPage = () => {
          
          {/* Left: Calendar */}
          <motion.div initial={{ y: 40, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} className="lg:col-span-7">
-            <div className="bg-zinc-900 p-6 md:p-10 rounded-[2.5rem] shadow-2xl border border-white/5 relative overflow-hidden">
+            <div className="bg-white p-6 md:p-10 rounded-[2.5rem] shadow-2xl border border-zinc-100 relative overflow-hidden">
                <div className="absolute top-0 right-0 w-64 h-64 bg-[#d4af37] rounded-full blur-[120px] opacity-10 pointer-events-none" />
                
                <div className="relative z-10 flex items-center gap-4 mb-8">
-                  <div className="w-14 h-14 bg-black rounded-full flex items-center justify-center text-[#d4af37] border border-white/10"><CalIcon size={24} /></div>
+                  <div className="w-14 h-14 bg-zinc-50 rounded-full flex items-center justify-center text-[#d4af37] border border-zinc-100"><CalIcon size={24} /></div>
                   <div>
-                    <h3 className="font-bold text-2xl text-white">Select Dates</h3>
+                    <h3 className="font-bold text-2xl text-zinc-900">Select Dates</h3>
                     <p className="text-zinc-500 text-sm">Tap start date, then end date.</p>
                   </div>
                </div>
                
-               <div className="flex justify-center bg-black/40 rounded-3xl p-6 border border-white/5">
+               <div className="flex justify-center bg-zinc-50 rounded-3xl p-6 border border-zinc-100">
                  <DatePicker 
                     selected={startDate} 
                     onChange={(update) => setDateRange(update)} 
@@ -217,17 +217,17 @@ const BookingPage = () => {
                     inline 
                     monthsShown={window.innerWidth > 768 ? 2 : 1} // Responsive Calendar
                     minDate={new Date()} 
-                    calendarClassName="!border-0 !font-sans !bg-transparent text-white" 
+                    calendarClassName="!border-0 !font-sans !bg-transparent" 
                  />
                </div>
                <style>{`
                   .react-datepicker__header { background: transparent; border: none; }
-                  .react-datepicker__current-month { color: white !important; font-family: serif; font-size: 1.2rem; margin-bottom: 1rem; }
-                  .react-datepicker__day-name { color: #52525b !important; font-weight: bold; }
-                  .react-datepicker__day { color: #d4d4d8 !important; }
-                  .react-datepicker__day:hover { background-color: #27272a !important; border-radius: 50%; color: white !important; }
+                  .react-datepicker__current-month { color: #18181b !important; font-family: serif; font-size: 1.2rem; margin-bottom: 1rem; }
+                  .react-datepicker__day-name { color: #a1a1aa !important; font-weight: bold; }
+                  .react-datepicker__day { color: #52525b !important; }
+                  .react-datepicker__day:hover { background-color: #f4f4f5 !important; border-radius: 50%; color: black !important; }
                   .react-datepicker__day--selected, .react-datepicker__day--in-range { background-color: #d4af37 !important; color: black !important; font-weight: bold; border-radius: 50%; box-shadow: 0 0 15px rgba(212,175,55,0.4); }
-                  .react-datepicker__day--disabled { color: #3f3f46 !important; }
+                  .react-datepicker__day--disabled { color: #d4d4d8 !important; }
                `}</style>
             </div>
          </motion.div>
@@ -235,9 +235,9 @@ const BookingPage = () => {
          {/* Right: Checkout Card */}
          <motion.div initial={{ y: 40, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="lg:col-span-5 relative">
             <div className="sticky top-24">
-              <div className="bg-black text-white p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl border border-white/10">
+              <div className="bg-white text-zinc-900 p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl border border-zinc-100">
                  {/* Gold Glow Effect */}
-                 <div className="absolute -top-32 -right-32 w-80 h-80 bg-[#d4af37] rounded-full blur-[100px] opacity-15" />
+                 <div className="absolute -top-32 -right-32 w-80 h-80 bg-[#d4af37] rounded-full blur-[100px] opacity-10" />
                  
                  <h2 className="text-2xl font-serif font-bold mb-8 relative z-10 flex items-center gap-3">
                     <span className="w-1 h-8 bg-[#d4af37] rounded-full" /> Reservation
@@ -246,22 +246,22 @@ const BookingPage = () => {
                  <div className="space-y-6 relative z-10">
                     <div>
                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">Guest Name</label>
-                       <div className="relative bg-white/5 rounded-xl overflow-hidden focus-within:ring-1 focus-within:ring-[#d4af37] transition-all border border-white/5">
-                          <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-                          <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Full Name" className="w-full bg-transparent border-none py-4 pl-12 pr-4 text-white focus:outline-none placeholder:text-zinc-700" />
+                       <div className="relative bg-zinc-50 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#d4af37]/20 transition-all border border-zinc-200">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
+                          <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Full Name" className="w-full bg-transparent border-none py-4 pl-12 pr-4 text-zinc-900 focus:outline-none placeholder:text-zinc-400" />
                        </div>
                     </div>
 
-                    <div className="bg-white/5 rounded-2xl p-6 border border-white/5 space-y-4">
-                        <div className="flex justify-between text-sm text-zinc-400">
+                    <div className="bg-zinc-50 rounded-2xl p-6 border border-zinc-100 space-y-4">
+                        <div className="flex justify-between text-sm text-zinc-500">
                            <span>Price / Night</span>
-                           <span className="text-white">₹{room.price.toLocaleString()}</span>
+                           <span className="text-zinc-900 font-bold">₹{room.price.toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-sm text-zinc-400">
+                        <div className="flex justify-between text-sm text-zinc-500">
                            <span>Duration</span>
-                           <span className="text-white">{nights} Nights</span>
+                           <span className="text-zinc-900 font-bold">{nights} Nights</span>
                         </div>
-                        <div className="h-px bg-white/10 my-1" />
+                        <div className="h-px bg-zinc-200 my-1" />
                         <div className="flex justify-between items-end">
                            <span className="text-zinc-500 font-bold text-xs uppercase tracking-widest">Total</span>
                            <span className="text-3xl font-serif font-bold text-[#d4af37]">₹{totalPrice.toLocaleString()}</span>
@@ -272,7 +272,7 @@ const BookingPage = () => {
                  <button 
                     onClick={handlePayment} 
                     disabled={loading || !nights || !guestName} 
-                    className="w-full mt-8 py-5 bg-[#d4af37] text-black font-bold text-lg rounded-2xl hover:bg-white transition-all flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_40px_rgba(212,175,55,0.3)] relative z-10 group"
+                    className="w-full mt-8 py-5 bg-[#d4af37] text-black font-bold text-lg rounded-2xl hover:bg-black hover:text-white transition-all flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_40px_rgba(212,175,55,0.3)] relative z-10 group"
                  >
                     {loading ? <span className="animate-pulse">Processing...</span> : <><CreditCard size={20} className="group-hover:scale-110 transition-transform" /> Confirm Booking</>}
                  </button>
