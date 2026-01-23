@@ -25,6 +25,9 @@ const BookingPage = () => {
   const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.1]);
 
   useEffect(() => {
+    // 0. Scroll to top
+    window.scrollTo(0, 0);
+
     // 1. Redirect if no room selected
     if (!room) { navigate('/rooms'); return; }
     
