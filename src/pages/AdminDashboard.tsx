@@ -72,7 +72,8 @@ const AdminDashboard = () => {
       }
       
       // 3. Fetch profiles (for joining names)
-      const { data: pData, error: pError } = await supabase.from('profiles').select('id, full_name, mobile_number');
+      // Fix: Strictly select columns causing no 400 error. 'mobile_number' does not exist on profiles.
+      const { data: pData, error: pError } = await supabase.from('profiles').select('id, full_name'); 
       if (pError) console.error('⚠️ Profiles fetch error (non-critical):', pError);
       
       if (bData) {
@@ -113,15 +114,18 @@ const AdminDashboard = () => {
       const { data: hData } = await supabase.from('housekeeping').select('*').order('room_number');
       if (hData) setHousekeeping(hData as HousekeepingTask[]);
 
-      // 5. Guests (Try multiple casing)
+      // 5. Guests (Fix: Default to 'Guest' as 404 confirmed 'guests' is wrong)
       let gDataResult = null;
-      const { data: gDataLower, error: gErrorLower } = await supabase.from('guests').select('*');
-      if (!gErrorLower && gDataLower) {
-         gDataResult = gDataLower;
+      console.log('Fetching Guest table...');
+      const { data: gDataUpper, error: gErrorUpper } = await supabase.from('Guest').select('*');
+      
+      if (!gErrorUpper && gDataUpper) {
+         gDataResult = gDataUpper;
+         console.log('✅ Guest table fetched');
       } else {
-         console.log('Trying "Guest" table casing...');
-         const { data: gDataUpper } = await supabase.from('Guest').select('*');
-         if (gDataUpper) gDataResult = gDataUpper;
+         console.warn('⚠️ Guest table fetch failed, trying lowercase fallback...');
+         const { data: gDataLower } = await supabase.from('guests').select('*');
+         if (gDataLower) gDataResult = gDataLower;
       }
       if (gDataResult) setGuests(gDataResult as Guest[]);
 
