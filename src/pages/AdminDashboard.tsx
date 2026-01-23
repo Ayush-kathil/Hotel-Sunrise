@@ -40,39 +40,39 @@ const AdminDashboard = () => {
   const [events, setEvents] = useState<EventInquiry[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [housekeeping, setHousekeeping] = useState<HousekeepingTask[]>([]);
-  const [guests, setGuests] = useState<Guest[]>([]); // External guests
+  const [guests, setGuests] = useState<Guest[]>([]);
 
-  // FETCH DATA
+  // FETCH DATA - Each query wrapped separately to prevent one failure from blocking others
   const fetchData = async () => {
+    if (!isAuthenticated) return;
+    
     try {
-      if (!isAuthenticated) return;
-      
-      const { data: rData } = await supabase.from('rooms').select('*').order('room_number');
-      const { data: bData } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
-      const { data: pData } = await supabase.from('profiles').select('id, full_name, mobile_number');
-      const { data: nData } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
-      const { data: dData } = await supabase.from('dining_reservations').select('*').order('date', { ascending: true });
-      const { data: eData } = await supabase.from('event_inquiries').select('*').order('created_at', { ascending: false });
-      const { data: mData } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
-      const { data: hData } = await supabase.from('housekeeping').select('*').order('room_number');
-      const { data: gData } = await supabase.from('Guest').select('*'); // Ensure table name casing matches DB
-
-      if (rData) {
-        setRooms(rData as any);
-        setStats(prev => ({ ...prev, availableRooms: rData.filter((r: any) => r.status === 'available').length }));
+      // Fetch rooms
+      const { data: rData, error: rError } = await supabase.from('rooms').select('*').order('room_number');
+      if (rError) console.error('Rooms fetch error:', rError);
+      else if (rData) {
+        setRooms(rData as Room[]);
+        setStats(prev => ({ ...prev, availableRooms: rData.filter(r => r.status === 'available').length }));
       }
+
+      // Fetch bookings
+      const { data: bData, error: bError } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
+      if (bError) console.error('Bookings fetch error:', bError);
+      
+      // Fetch profiles for joining
+      const { data: pData, error: pError } = await supabase.from('profiles').select('id, full_name, mobile_number');
+      if (pError) console.error('Profiles fetch error:', pError);
       
       if (bData) {
-        // Manual Join for profiles
         const joinedBookings = bData.map((b: any) => {
-           // Try to find profile by user_id
-           const profile = pData?.find((p: any) => p.id === b.user_id);
-           return {
-             ...b,
-             profiles: profile ? { full_name: profile.full_name, mobile_number: profile.mobile_number || b.mobile_number } : { full_name: 'Guest', mobile_number: b.mobile_number }
-           };
+          const profile = pData?.find((p: any) => p.id === b.user_id);
+          return {
+            ...b,
+            profiles: profile 
+              ? { full_name: profile.full_name, mobile_number: profile.mobile_number || b.mobile_number } 
+              : { full_name: b.guest_name || 'Guest', mobile_number: b.mobile_number }
+          };
         });
-
         setReservations(joinedBookings);
         
         const today = new Date().toDateString();
@@ -84,17 +84,46 @@ const AdminDashboard = () => {
           checkOuts: bData.filter((b: any) => new Date(b.check_out).toDateString() === today).length,
         }));
       }
-      
-      if (nData) setNotifications(nData as any);
-      if (dData) setDining(dData as any);
-      if (eData) setEvents(eData as any);
-      if (mData) setMessages(mData as any);
-      if (hData) setHousekeeping(hData as any);
-      if (gData) setGuests(gData as any);
+
+      // Fetch notifications
+      const { data: nData, error: nError } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
+      if (nError) console.error('Notifications fetch error:', nError);
+      else if (nData) setNotifications(nData as Notification[]);
+
+      // Fetch dining reservations
+      const { data: dData, error: dError } = await supabase.from('dining_reservations').select('*').order('date', { ascending: true });
+      if (dError) console.error('Dining fetch error:', dError);
+      else if (dData) setDining(dData as DiningReservation[]);
+
+      // Fetch event inquiries
+      const { data: eData, error: eError } = await supabase.from('event_inquiries').select('*').order('created_at', { ascending: false });
+      if (eError) console.error('Events fetch error:', eError);
+      else if (eData) setEvents(eData as EventInquiry[]);
+
+      // Fetch contact messages
+      const { data: mData, error: mError } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
+      if (mError) console.error('Messages fetch error:', mError);
+      else if (mData) setMessages(mData as ContactMessage[]);
+
+      // Fetch housekeeping
+      const { data: hData, error: hError } = await supabase.from('housekeeping').select('*').order('room_number');
+      if (hError) console.error('Housekeeping fetch error:', hError);
+      else if (hData) setHousekeeping(hData as HousekeepingTask[]);
+
+      // Fetch guests - try lowercase first, then uppercase if it fails
+      let gData = null;
+      const { data: gDataLower, error: gErrorLower } = await supabase.from('guests').select('*');
+      if (gErrorLower) {
+        // Try uppercase table name
+        const { data: gDataUpper, error: gErrorUpper } = await supabase.from('Guest').select('*');
+        if (!gErrorUpper && gDataUpper) gData = gDataUpper;
+      } else {
+        gData = gDataLower;
+      }
+      if (gData) setGuests(gData as Guest[]);
 
     } catch (err: any) {
       console.error('Data fetch error:', err);
-      toast.error('Failed to sync data');
     } finally {
       setLoading(false);
     }
@@ -114,14 +143,9 @@ const AdminDashboard = () => {
     if (!isAuthenticated) return;
 
     const channel = supabase.channel('admin-dashboard-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public' },
-        (payload) => {
-          fetchData();
-          toast.info(`Update received from ${payload.table}`);
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        fetchData(); // Auto-refresh on any DB change
+      })
       .subscribe();
 
     return () => {
@@ -218,10 +242,10 @@ const AdminDashboard = () => {
 
   // --- RENDER: DASHBOARD ---
   return (
-    <div className={`flex h-screen font-sans overflow-hidden ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100 text-gray-900'}`}>
+    <div className={`flex h-screen font-sans ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100 text-gray-900'}`}>
       
       {/* SIDEBAR */}
-      <aside className={`w-64 flex flex-col border-r shrink-0 z-20 ${darkMode ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}`}>
+      <aside className={`w-64 h-screen flex flex-col border-r shrink-0 z-20 ${darkMode ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}`}>
         <div className="p-6 border-b border-white/5">
           <h1 className="text-xl font-bold tracking-wider flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-white font-serif italic">S</span>
@@ -233,25 +257,25 @@ const AdminDashboard = () => {
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">Front Desk</p>
             <div className="space-y-1">
-              <NavItem icon={LayoutGrid} label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} darkMode={darkMode} />
-              <NavItem icon={Calendar} label="Reservations" active={activeTab === 'guests'} onClick={() => setActiveTab('guests')} darkMode={darkMode} />
-              <NavItem icon={Package} label="Rooms & Inventory" active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} darkMode={darkMode} />
-              <NavItem icon={UserCheck} label="Guest Database" active={activeTab === 'guest_db'} onClick={() => setActiveTab('guest_db')} darkMode={darkMode} />
+              <NavItem icon={LayoutGrid} label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
+              <NavItem icon={Calendar} label="Reservations" active={activeTab === 'guests'} onClick={() => setActiveTab('guests')} />
+              <NavItem icon={Package} label="Rooms & Inventory" active={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} />
+              <NavItem icon={UserCheck} label="Guest Database" active={activeTab === 'guest_db'} onClick={() => setActiveTab('guest_db')} />
             </div>
           </div>
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">Operations</p>
             <div className="space-y-1">
-              <NavItem icon={Brush} label="Housekeeping" active={activeTab === 'housekeeping'} onClick={() => setActiveTab('housekeeping')} darkMode={darkMode} />
-              <NavItem icon={Utensils} label="Dining" active={activeTab === 'dining'} onClick={() => setActiveTab('dining')} darkMode={darkMode} />
-              <NavItem icon={PartyPopper} label="Events" active={activeTab === 'events'} onClick={() => setActiveTab('events')} darkMode={darkMode} />
+              <NavItem icon={Brush} label="Housekeeping" active={activeTab === 'housekeeping'} onClick={() => setActiveTab('housekeeping')} />
+              <NavItem icon={Utensils} label="Dining" active={activeTab === 'dining'} onClick={() => setActiveTab('dining')} />
+              <NavItem icon={PartyPopper} label="Events" active={activeTab === 'events'} onClick={() => setActiveTab('events')} />
             </div>
           </div>
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">System</p>
             <div className="space-y-1">
-               <NavItem icon={Mail} label="Inbox" active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} darkMode={darkMode} />
-               <NavItem icon={Megaphone} label="Website Updates" active={activeTab === 'updates'} onClick={() => setActiveTab('updates')} darkMode={darkMode} />
+               <NavItem icon={Mail} label="Inbox" active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} />
+               <NavItem icon={Megaphone} label="Website Updates" active={activeTab === 'updates'} onClick={() => setActiveTab('updates')} />
             </div>
           </div>
         </nav>
@@ -267,8 +291,8 @@ const AdminDashboard = () => {
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+      {/* MAIN CONTENT - Fixed scrolling by removing overflow-hidden from main */}
+      <main className="flex-1 h-screen flex flex-col">
         <header className={`flex items-center justify-between px-8 py-4 border-b shrink-0 ${darkMode ? 'border-white/5' : 'bg-white border-gray-200'}`}>
           <h2 className="text-xl font-bold capitalize">{activeTab.replace('_', ' ')}</h2>
           <div className="flex items-center gap-4">
@@ -280,7 +304,11 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 pb-32 space-y-8">
+        {/* SCROLLABLE CONTENT AREA - This is the key fix for scrolling */}
+        <div 
+          className="flex-1 p-8 space-y-8"
+          style={{ overflowY: 'auto', height: 'calc(100vh - 80px)' }}
+        >
           
           {loading && rooms.length === 0 ? (
              <div className="flex flex-col items-center justify-center py-20 opacity-50 animate-pulse gap-4">
@@ -289,69 +317,70 @@ const AdminDashboard = () => {
              </div>
           ) : (
             <>
+              {/* OVERVIEW TAB */}
               {activeTab === 'overview' && (
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                        <StatCard icon={BedDouble} label="New Bookings" value={stats.newBookings} color="bg-[#6366F1]" />
-                       <StatCard icon={Package} label="Available" value={stats.availableRooms} color="bg-[#22C55E]" />
+                       <StatCard icon={Package} label="Available Rooms" value={stats.availableRooms} color="bg-[#22C55E]" />
                        <StatCard icon={Utensils} label="Dining Resv" value={dining.length} color="bg-[#F97316]" />
                        <StatCard icon={Mail} label="Messages" value={messages.length} color="bg-[#EC4899]" />
                     </div>
+                    
                     {/* Recent Bookings List */}
                     <div className={`rounded-2xl p-6 border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
-                       <h3 className="font-bold text-lg mb-4">Recent Hotel Bookings</h3>
-                       {reservations.slice(0, 5).map(res => (
-                          <div key={res.id} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors">
-                             <div>
-                                <p className="font-bold">{res.profiles?.full_name || 'Guest'}</p>
-                                <p className="text-xs opacity-40">Room {res.room_number || 'N/A'}</p>
-                             </div>
-                             <span className="text-xs font-bold opacity-60">{new Date(res.check_in).toLocaleDateString()}</span>
-                          </div>
-                       ))}
-                       {reservations.length === 0 && <p className="opacity-30">No recent bookings</p>}
+                       <h3 className="font-bold text-lg mb-4">Recent Hotel Bookings ({reservations.length} total)</h3>
+                       {reservations.length > 0 ? (
+                         reservations.slice(0, 5).map(res => (
+                           <div key={res.id} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors">
+                              <div>
+                                 <p className="font-bold">{res.profiles?.full_name || 'Guest'}</p>
+                                 <p className="text-xs opacity-40">Room {res.room_number || 'N/A'}</p>
+                              </div>
+                              <span className="text-xs font-bold opacity-60">{new Date(res.check_in).toLocaleDateString()}</span>
+                           </div>
+                         ))
+                       ) : (
+                         <p className="opacity-30 text-center py-4">No recent bookings found</p>
+                       )}
                     </div>
                   </>
                )}
 
+              {/* RESERVATIONS TAB */}
               {activeTab === 'guests' && (
                   <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                      <table className="w-full text-sm text-left">
-                        <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}><tr><th className="p-4">Guest</th><th className="p-4">Room</th><th className="p-4">Dates</th><th className="p-4">Amount</th></tr></thead>
+                        <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}>
+                          <tr><th className="p-4">Guest</th><th className="p-4">Room</th><th className="p-4">Dates</th><th className="p-4">Amount</th></tr>
+                        </thead>
                         <tbody className="divide-y divide-white/5">
-                           {reservations.map(r => (
+                           {reservations.length > 0 ? reservations.map(r => (
                               <tr key={r.id} className="hover:opacity-80">
                                 <td className="p-4 font-bold">{r.profiles?.full_name || 'Unknown'}</td>
                                 <td className="p-4">{r.room_number || '-'}</td>
                                 <td className="p-4 opacity-60">{new Date(r.check_in).toLocaleDateString()} - {new Date(r.check_out).toLocaleDateString()}</td>
                                 <td className="p-4 opacity-60">₹{r.total_price?.toLocaleString()}</td>
                               </tr>
-                           ))}
+                           )) : (
+                             <tr><td colSpan={4} className="p-8 text-center opacity-30">No reservations found</td></tr>
+                           )}
                         </tbody>
                      </table>
                   </div>
               )}
 
+              {/* ROOMS & INVENTORY TAB */}
               {activeTab === 'inventory' && (
-                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 pb-20">
-                    {rooms.map(r => {
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {rooms.length > 0 ? rooms.map(r => {
                        const now = new Date();
                        const activeRes = reservations.find(res => {
-                           // 1. Normalize Room Numbers to String to prevent Type Mimecast (101 vs "101")
                            if (String(res.room_number) !== String(r.room_number)) return false;
-
-                           // 2. Parse Dates safely
                            const checkIn = new Date(res.check_in);
                            const checkOut = new Date(res.check_out);
-                           
-                           // 3. Normalize to Day Boundaries to avoid Timezone/Time-of-day issues
-                           // Check-in starts at 00:00:00 local time
                            checkIn.setHours(0,0,0,0);
-                           // Check-out ends at 23:59:59 local time (inclusive)
                            checkOut.setHours(23,59,59,999);
-                           // Current time
-                           // We compare 'now' against the window. 
-                           // If today is equal to checkIn OR today is equal to checkOut OR today is between them.
                            return now.getTime() >= checkIn.getTime() && now.getTime() <= checkOut.getTime();
                        });
 
@@ -359,21 +388,40 @@ const AdminDashboard = () => {
                        const statusLabel = isOccupied ? 'occupied' : r.status;
 
                        return (
-                       <div key={r.id} className={`p-4 rounded-xl border text-center transition-all hover:scale-105 ${statusLabel === 'available' ? 'border-green-500/20 text-green-500 bg-green-500/5' : isOccupied ? 'border-yellow-500 text-black bg-yellow-400' : 'border-red-500/20 text-red-500 bg-red-500/5'}`}>
-                          {isOccupied && <p className="text-[9px] font-bold uppercase tracking-wider mb-1 opacity-70">Check Out: {new Date(activeRes!.check_out).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</p>}
-                          <h3 className="font-bold text-2xl">{r.room_number}</h3>
-                          <p className="text-[10px] uppercase opacity-60 font-bold tracking-wider mt-1">{statusLabel}</p>
-                       </div>
-                    )})}
+                         <div 
+                           key={r.id} 
+                           className={`p-4 rounded-xl border text-center transition-all hover:scale-105 cursor-pointer ${
+                             statusLabel === 'available' 
+                               ? 'border-green-500/30 text-green-500 bg-green-500/10' 
+                               : isOccupied 
+                                 ? 'border-yellow-500 text-black bg-yellow-400 shadow-lg' 
+                                 : 'border-red-500/30 text-red-500 bg-red-500/10'
+                           }`}
+                         >
+                            {isOccupied && (
+                              <p className="text-[9px] font-bold uppercase tracking-wider mb-1 opacity-80">
+                                Out: {new Date(activeRes!.check_out).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
+                              </p>
+                            )}
+                            <h3 className="font-bold text-2xl">{r.room_number}</h3>
+                            <p className="text-[10px] uppercase opacity-70 font-bold tracking-wider mt-1">{statusLabel}</p>
+                         </div>
+                       );
+                    }) : (
+                      <div className="col-span-6 text-center py-10 opacity-30">No rooms found in database</div>
+                    )}
                  </div>
               )}
 
+              {/* GUEST DATABASE TAB */}
               {activeTab === 'guest_db' && (
                  <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <table className="w-full text-sm text-left">
-                       <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}><tr><th className="p-4">ID</th><th className="p-4">Name</th><th className="p-4">Contact</th></tr></thead>
+                       <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}>
+                         <tr><th className="p-4">ID</th><th className="p-4">Name</th><th className="p-4">Contact</th></tr>
+                       </thead>
                        <tbody className="divide-y divide-white/5">
-                          {guests.map(g => (
+                          {guests.length > 0 ? guests.map(g => (
                              <tr key={g.id} className="hover:opacity-80">
                                 <td className="p-4 font-mono opacity-50">#{g.id}</td>
                                 <td className="p-4 font-bold">{g.full_name}</td>
@@ -382,13 +430,15 @@ const AdminDashboard = () => {
                                    <div className="text-xs opacity-50">{g.mobile_number}</div>
                                 </td>
                              </tr>
-                          ))}
-                          {guests.length === 0 && <tr><td colSpan={3} className="p-8 text-center opacity-30 italic">No external guests found in Guest table.</td></tr>}
+                          )) : (
+                            <tr><td colSpan={3} className="p-8 text-center opacity-30 italic">No guests found</td></tr>
+                          )}
                        </tbody>
                     </table>
                  </div>
               )}
 
+              {/* HOUSEKEEPING TAB */}
               {activeTab === 'housekeeping' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
@@ -396,7 +446,7 @@ const AdminDashboard = () => {
                          <Brush size={18}/> Cleaning Tasks
                     </h3>
                     <div className="space-y-3">
-                       {housekeeping.map(task => (
+                       {housekeeping.length > 0 ? housekeeping.map(task => (
                           <div key={task.id} className={`flex items-center gap-4 p-4 rounded-xl border ${darkMode ? 'bg-[#252525] border-white/5' : 'bg-gray-50 border-gray-200'}`}>
                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
                                 task.status === 'clean' ? 'bg-green-500/20 text-green-500' :
@@ -409,15 +459,16 @@ const AdminDashboard = () => {
                                 <p className="font-bold">{task.assigned_to || 'Unassigned'}</p>
                                 <p className="text-xs opacity-50 uppercase tracking-wider">{task.status}</p>
                              </div>
-                             <div className="ml-auto flex gap-2">
-                                <span className={`w-3 h-3 rounded-full ${
+                             <div className="ml-auto">
+                                <span className={`w-3 h-3 rounded-full inline-block ${
                                    task.status === 'clean' ? 'bg-green-500' :
                                    task.status === 'dirty' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
                                 }`}/>
                              </div>
                           </div>
-                       ))}
-                       {housekeeping.length === 0 && <p className="text-center opacity-30 italic py-10">All rooms are clean!</p>}
+                       )) : (
+                         <p className="text-center opacity-30 italic py-10">No housekeeping tasks</p>
+                       )}
                     </div>
                   </div>
                   
@@ -425,7 +476,7 @@ const AdminDashboard = () => {
                      <h3 className="font-bold text-lg mb-4">Floor Plan Status</h3>
                      <div className="grid grid-cols-4 gap-2">
                         {rooms.map(r => {
-                           const hpStatus = housekeeping.find(h => h.room_number === r.room_number)?.status || 'clean';
+                           const hpStatus = housekeeping.find(h => String(h.room_number) === String(r.room_number))?.status || 'clean';
                            return (
                            <div key={r.id} className={`p-2 text-center rounded-lg border text-xs flex flex-col items-center justify-center h-20 transition-all ${
                               hpStatus === 'dirty' ? 'border-red-500/50 bg-red-500/10 text-red-500' :
@@ -434,7 +485,7 @@ const AdminDashboard = () => {
                               'border-green-500/20 bg-green-500/5 text-green-500'
                            }`}>
                               <span className="text-lg font-bold">{r.room_number}</span>
-                              <span className="text-[9px] opacity-70 mb-1 font-bold uppercase">{hpStatus === 'clean' ? r.status : hpStatus}</span>
+                              <span className="text-[9px] opacity-70 font-bold uppercase">{hpStatus === 'clean' ? r.status : hpStatus}</span>
                            </div>
                         )})}
                      </div>
@@ -442,29 +493,34 @@ const AdminDashboard = () => {
                 </div>
               )}
 
+              {/* DINING TAB */}
               {activeTab === 'dining' && (
                  <div className={`rounded-2xl border overflow-x-auto ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                     <div className="p-6 border-b border-white/5"><h2 className="font-bold text-lg">Table Reservations</h2></div>
                     <table className="w-full text-sm text-left">
-                       <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}><tr><th className="p-4">Name</th><th className="p-4">Date & Time</th><th className="p-4">Guests</th><th className="p-4">Status</th></tr></thead>
+                       <thead className={`uppercase text-[10px] tracking-widest opacity-50 ${darkMode ? 'bg-[#202020]' : 'bg-gray-100'}`}>
+                         <tr><th className="p-4">Name</th><th className="p-4">Date & Time</th><th className="p-4">Guests</th><th className="p-4">Status</th></tr>
+                       </thead>
                        <tbody className="divide-y divide-white/5">
-                          {dining.map(d => (
+                          {dining.length > 0 ? dining.map(d => (
                              <tr key={d.id} className="hover:opacity-80">
                                 <td className="p-4 font-bold">{d.name}</td>
                                 <td className="p-4 opacity-70">{new Date(d.date).toLocaleDateString()} at {d.time}</td>
-                                <td className="p-4">{d.guests}Pax</td>
+                                <td className="p-4">{d.guests} Pax</td>
                                 <td className="p-4"><span className="px-2 py-1 bg-orange-500/10 text-orange-500 rounded text-xs font-bold uppercase">{d.status}</span></td>
                              </tr>
-                          ))}
-                          {dining.length === 0 && <tr><td colSpan={4} className="p-8 text-center opacity-30">No dining reservations found.</td></tr>}
+                          )) : (
+                            <tr><td colSpan={4} className="p-8 text-center opacity-30">No dining reservations</td></tr>
+                          )}
                        </tbody>
                     </table>
                  </div>
               )}
 
+              {/* EVENTS TAB */}
               {activeTab === 'events' && (
                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {events.map(e => (
+                    {events.length > 0 ? events.map(e => (
                        <div key={e.id} className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                           <div className="flex justify-between items-start mb-4">
                              <div className="p-2 bg-[#6366F1]/10 text-[#6366F1] rounded-lg"><PartyPopper size={20}/></div>
@@ -476,14 +532,16 @@ const AdminDashboard = () => {
                              <Mail size={12}/> {e.email} • {e.guests} Guests
                           </div>
                        </div>
-                    ))}
-                    {events.length === 0 && <div className="col-span-3 text-center opacity-30 py-10">No event inquiries yet.</div>}
+                    )) : (
+                      <div className="col-span-3 text-center opacity-30 py-10">No event inquiries</div>
+                    )}
                  </div>
               )}
 
+              {/* MESSAGES TAB */}
               {activeTab === 'messages' && (
                  <div className="space-y-4">
-                    {messages.map(m => (
+                    {messages.length > 0 ? messages.map(m => (
                        <div key={m.id} className={`p-6 rounded-2xl border flex gap-6 ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                           <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 font-bold text-lg">
                             {(m.name && m.name.length > 0) ? m.name[0].toUpperCase() : '?'}
@@ -497,24 +555,30 @@ const AdminDashboard = () => {
                              <p className="opacity-80 leading-relaxed">{m.message}</p>
                           </div>
                        </div>
-                    ))}
-                    {messages.length === 0 && <div className="text-center opacity-30 py-10">No messages in inbox.</div>}
+                    )) : (
+                      <div className="text-center opacity-30 py-10">No messages</div>
+                    )}
                  </div>
               )}
 
+              {/* UPDATES TAB */}
               {activeTab === 'updates' && (
                  <div className="grid lg:grid-cols-3 gap-8">
                    <div className={`lg:col-span-1 p-6 rounded-2xl border h-fit ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
                      <h2 className="text-xl font-bold mb-4">Post Global Update</h2>
                      <form onSubmit={handlePostNotification} className="space-y-4">
                        <input name="title" required className={`w-full p-3 rounded-xl border outline-none ${darkMode ? 'bg-[#252525] border-white/10' : 'bg-gray-50'}`} placeholder="Title" />
-                       <select name="type" className={`w-full p-3 rounded-xl border outline-none ${darkMode ? 'bg-[#252525] border-white/10' : 'bg-gray-50'}`}><option value="offer">Special Offer</option><option value="news">News</option><option value="alert">Alert</option></select>
+                       <select name="type" className={`w-full p-3 rounded-xl border outline-none ${darkMode ? 'bg-[#252525] border-white/10' : 'bg-gray-50'}`}>
+                         <option value="offer">Special Offer</option>
+                         <option value="news">News</option>
+                         <option value="alert">Alert</option>
+                       </select>
                        <textarea name="message" required rows={3} className={`w-full p-3 rounded-xl border outline-none ${darkMode ? 'bg-[#252525] border-white/10' : 'bg-gray-50'}`} placeholder="Message..."></textarea>
-                       <button className="w-full bg-[#6366F1] text-white font-bold py-3 rounded-xl">Push</button>
+                       <button className="w-full bg-[#6366F1] text-white font-bold py-3 rounded-xl hover:bg-[#5558DD] transition-colors">Push Update</button>
                      </form>
                    </div>
                     <div className="lg:col-span-2 space-y-2">
-                       {notifications.map(n => (
+                       {notifications.length > 0 ? notifications.map(n => (
                           <div key={n.id} className={`p-4 rounded-xl border flex justify-between items-center ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white'}`}>
                              <div>
                                <p className="font-bold flex items-center gap-2">
@@ -528,13 +592,14 @@ const AdminDashboard = () => {
                              </div>
                              <button 
                                onClick={() => handleDeleteNotification(n.id)} 
-                               className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 text-xs font-bold"
+                               className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all text-xs font-bold"
                              >
-                                <LogOut size={14} className="rotate-0" /> Delete
+                                Delete
                              </button>
                           </div>
-                       ))}
-                       {notifications.length === 0 && <div className="text-center p-8 opacity-30 italic border-2 border-dashed rounded-2xl">No active notifications</div>}
+                       )) : (
+                         <div className="text-center p-8 opacity-30 italic border-2 border-dashed rounded-2xl">No active notifications</div>
+                       )}
                     </div>
                  </div>
               )}
@@ -546,6 +611,7 @@ const AdminDashboard = () => {
   );
 };
 
+// Sub-components
 const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
   <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${active ? 'bg-[#6366F1] text-white' : 'opacity-50 hover:opacity-100'}`}>
     <Icon size={18} /> {label}
