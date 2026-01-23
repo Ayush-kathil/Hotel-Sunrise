@@ -139,7 +139,7 @@ const BookingPage = () => {
       <section className="relative h-[60vh] md:h-[70vh] w-full overflow-hidden">
          <motion.div style={{ scale: heroScale }} className="absolute inset-0">
              <video autoPlay muted loop playsInline className="w-full h-full object-cover">
-                <source src={room.video || "https://cdn.pixabay.com/video/2017/01/04/7123-198192800_large.mp4"} type="video/mp4" />
+                <source src={room.video || "https://www.pexels.com/download/video/5498751/"} type="video/mp4" />
              </video>
          </motion.div>
          <div className="absolute inset-0 bg-black/20" />
