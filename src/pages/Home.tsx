@@ -35,7 +35,7 @@ const HomeMobile = () => {
       <section className="relative h-screen w-full overflow-hidden">
          <div className="absolute inset-0">
             <video autoPlay muted loop playsInline className="w-full h-full object-cover opacity-90">
-                <source src="https://www.pexels.com/download/video/35605168/" type="video/mp4" />
+                <source src="/mobile_video.mp4" type="video/mp4" />
             </video>
          </div>
          <div className="absolute inset-0 bg-gradient-to-t from-[#fcfbf9] via-transparent to-transparent" />

@@ -60,7 +60,7 @@ const Rooms = () => {
       desc: "Ideal for friends or family, offering two queen beds and a private balcony overlooking our lush serenity gardens.",
       amenities: ["2 Queen Beds", "Garden Balcony", "Bathtub", "Lounge Area"],
       img: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=2074&auto=format&fit=crop",
-      video: "https://videos.pexels.com/video-files/7578552/7578552-uhd_2560_1440_30fps.mp4"
+      video: "https://www.pexels.com/download/video/19403230/"
     },
     {
       id: 3,
