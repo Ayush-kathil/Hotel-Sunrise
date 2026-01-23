@@ -9,6 +9,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]); // New State
   const [showOffers, setShowOffers] = useState(false);
   const [uploading, setUploading] = useState(false);
   
@@ -40,6 +41,14 @@ const Profile = () => {
         .eq('user_id', user.id)
         .order('check_in', { ascending: false });
       setBookings(books || []);
+
+      // 3. Get Notifications
+      const { data: notifs } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      setNotifications(notifs || []);
     };
     getData();
   }, [navigate]);
@@ -222,18 +231,18 @@ const Profile = () => {
            
            <AnimatePresence>
              {showOffers && (
-               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="bg-gradient-to-br from-[#d4af37] to-[#b89628] p-10 rounded-[2.5rem] text-white relative shadow-lg overflow-hidden">
-                     <div className="absolute -right-10 -bottom-10 opacity-20"><Tag size={200} /></div>
-                     <span className="inline-block px-3 py-1 bg-black/20 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest mb-4">Member Exclusive</span>
-                     <h3 className="text-4xl font-serif font-bold mb-4">Spa Sanctuary</h3>
-                     <p className="mb-8 max-w-lg text-white/90 text-lg">Indulge in our signature antigravity massage therapy. Members get an exclusive 15% privilege.</p>
-                     
-                     <div className="flex items-center gap-4">
-                        <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-xl font-mono text-xl font-bold tracking-widest border border-white/30">SPA15</div>
-                        <button className="bg-black text-white px-8 py-4 rounded-xl text-sm font-bold hover:bg-white hover:text-black transition-colors shadow-lg">Redeem Offer</button>
-                     </div>
-                  </div>
+               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-4">
+                  {notifications.length > 0 ? notifications.map((notif: any) => (
+                    <div key={notif.id} className={`p-8 rounded-[2.5rem] relative shadow-lg overflow-hidden ${notif.type === 'alert' ? 'bg-red-500 text-white' : 'bg-gradient-to-br from-[#d4af37] to-[#b89628] text-white'}`}>
+                       <div className="absolute -right-10 -bottom-10 opacity-20"><Tag size={200} /></div>
+                       <span className="inline-block px-3 py-1 bg-black/20 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest mb-4">{notif.type}</span>
+                       <h3 className="text-3xl font-serif font-bold mb-4">{notif.title}</h3>
+                       <p className="mb-4 max-w-lg opacity-90 text-lg leading-relaxed">{notif.message}</p>
+                       <p className="text-xs opacity-60 font-mono uppercase">{new Date(notif.created_at).toLocaleDateString()}</p>
+                    </div>
+                  )) : (
+                    <div className="p-8 text-center text-zinc-400 italic">No new notifications.</div>
+                  )}
                </motion.div>
              )}
            </AnimatePresence>

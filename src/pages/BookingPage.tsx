@@ -17,6 +17,7 @@ const BookingPage = () => {
   const [startDate, endDate] = dateRange;
   const [guests, setGuests] = useState({ adults: 1, children: 0 });
   const [guestName, setGuestName] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   
@@ -40,6 +41,7 @@ const BookingPage = () => {
        } else {
          setUser(session.user);
          setGuestName(session.user.user_metadata?.full_name || '');
+         setMobileNumber(session.user.user_metadata?.phone || '');
        }
     };
     checkSession();
@@ -51,6 +53,7 @@ const BookingPage = () => {
   const handlePayment = async () => {
     if (!startDate || !endDate) return toast.warning("Dates Required", { description: "Please select check-in and check-out dates." });
     if (!guestName) return toast.warning("Guest Name Required");
+    if (!mobileNumber) return toast.warning("Mobile Number Required");
     
     setLoading(true);
 
@@ -79,6 +82,7 @@ const BookingPage = () => {
         .upsert({
           id: user.id,
           full_name: guestName || 'Guest',
+          phone: mobileNumber,
         }, { onConflict: 'id' })
         .select();
 
@@ -95,6 +99,7 @@ const BookingPage = () => {
             room_number: assignedRoomNumber,
             price: room.price,
             total_price: totalPrice,
+            mobile_number: mobileNumber,
             check_in: startDate,
             check_out: endDate,
             nights: nights,
@@ -111,6 +116,7 @@ const BookingPage = () => {
         body: {
           email: user.email,
           name: guestName,
+          phone: mobileNumber,
           room_name: room.name,
           room_number: assignedRoomNumber,
           dates: `${format(startDate!, 'MMM dd')} - ${format(endDate!, 'MMM dd, yyyy')}`,
@@ -254,6 +260,12 @@ const BookingPage = () => {
                         <div className="relative bg-zinc-50 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#d4af37]/20 transition-all border border-zinc-200 mb-4">
                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
                            <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Full Name" className="w-full bg-transparent border-none py-4 pl-12 pr-4 text-zinc-900 focus:outline-none placeholder:text-zinc-400" />
+                        </div>
+
+                        {/* Mobile Number Input */}
+                        <div className="relative bg-zinc-50 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#d4af37]/20 transition-all border border-zinc-200 mb-4">
+                           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold text-xs">+91</div>
+                           <input type="tel" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} placeholder="Mobile Number" className="w-full bg-transparent border-none py-4 pl-12 pr-4 text-zinc-900 focus:outline-none placeholder:text-zinc-400" />
                         </div>
  
                         {/* Guest Count (Adults + Children) */}

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { 
   LayoutDashboard, Calendar, DollarSign, LogOut, 
-  Download, Lock, Utensils, Mail, Clock, Wifi, WifiOff 
+  Download, Lock, Utensils, Mail, Clock, Wifi, WifiOff, Bell, Plus, Trash2 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -55,12 +55,17 @@ const AdminDashboard = () => {
   const [isConnected, setIsConnected] = useState(false);
   
   // DATA STATES
-  const [stats, setStats] = useState({ revenue: 0, bookings: 0, dining: 0, contacts: 0 });
+  const [stats, setStats] = useState({ revenue: 0, bookings: 0, dining: 0, contacts: 0, notifications: 0 });
   const [bookings, setBookings] = useState<any[]>([]);
   const [diningRes, setDiningRes] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]); // New State
   const [masterSchedule, setMasterSchedule] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
+
+  // NOTIFICATION FORM STATE
+  const [notifForm, setNotifForm] = useState({ title: '', message: '', type: 'offer' });
+  const [isPosting, setIsPosting] = useState(false);
 
   // 1. DATA FETCHING
   useEffect(() => {
@@ -83,6 +88,12 @@ const AdminDashboard = () => {
         // C. Contact Messages (Inquiries)
         const { data: cData } = await supabase
           .from('contact_messages')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        // D. Notifications
+        const { data: nData } = await supabase
+          .from('notifications')
           .select('*')
           .order('created_at', { ascending: false });
 
@@ -134,8 +145,10 @@ const AdminDashboard = () => {
           revenue, 
           bookings: rawBookings.length, 
           dining: rawDining.length, 
-          contacts: rawContacts.length 
+          contacts: rawContacts.length,
+          notifications: nData?.length || 0 
         });
+        setNotifications(nData || []);
 
       } catch (err) {
         console.error("Fetch Error:", err);
@@ -168,6 +181,30 @@ const AdminDashboard = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
+  };
+
+  const handlePostNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPosting(true);
+    try {
+      const { data, error } = await supabase.from('notifications').insert([notifForm]).select().single();
+      if (error) throw error;
+      setNotifications([data, ...notifications]);
+      setNotifForm({ title: '', message: '', type: 'offer' });
+      toast.success("Notification Posted");
+    } catch (error: any) {
+      toast.error("Failed", { description: error.message });
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const handleDeleteNotif = async (id: string) => {
+    const { error } = await supabase.from('notifications').delete().eq('id', id);
+    if (!error) {
+      setNotifications(notifications.filter(n => n.id !== id));
+      toast.success("Notification Deleted");
+    }
   };
 
   // --- VIEW 1: LOCK SCREEN ---
@@ -390,6 +427,121 @@ const AdminDashboard = () => {
                 })}
                 {contacts.length === 0 && <EmptyState msg="Inbox is empty." />}
              </div>
+         )}
+
+         {/* TAB 6: NOTIFICATIONS */}
+         {activeTab === 'notifications' && (
+            <div className="grid lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+               {/* FORM */}
+               <div className="lg:col-span-1">
+                  <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-lg sticky top-8">
+                     <h3 className="font-serif font-bold text-xl mb-6">New Update</h3>
+                     <form onSubmit={handlePostNotification} className="space-y-4">
+                        <div>
+                           <label className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Title</label>
+                           <input type="text" required value={notifForm.title} onChange={e=>setNotifForm({...notifForm, title: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-[#d4af37]/20 mt-1" placeholder="e.g. Summer Sale" />
+                        </div>
+                        <div>
+                           <label className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Type</label>
+                           <select value={notifForm.type} onChange={e=>setNotifForm({...notifForm, type: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-[#d4af37]/20 mt-1">
+                              <option value="offer">Special Offer</option>
+                              <option value="news">Announcement</option>
+                              <option value="alert">Alert</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Message</label>
+                           <textarea required rows={4} value={notifForm.message} onChange={e=>setNotifForm({...notifForm, message: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-[#d4af37]/20 mt-1" placeholder="Enter details..." />
+                        </div>
+                        <button disabled={isPosting} className="w-full bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#d4af37] hover:text-black transition-colors">
+                           {isPosting ? "Posting..." : <><Plus size={18} /> Post Update</>} 
+                        </button>
+                     </form>
+                  </div>
+               </div>
+
+               {/* LIST */}
+               <div className="lg:col-span-2 space-y-4">
+                  {notifications.map((n: any) => (
+                     <div key={n.id} className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm flex justify-between items-start group hover:shadow-md transition-all">
+                        <div className="flex gap-4">
+                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${n.type==='offer' ? 'bg-[#d4af37]/10 text-[#d4af37]' : n.type==='alert' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
+                              <Bell size={20} />
+                           </div>
+                           <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                 <h4 className="font-bold text-lg">{n.title}</h4>
+                                 <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded uppercase font-bold text-zinc-500">{n.type}</span>
+                              </div>
+                              <p className="text-zinc-600 text-sm">{n.message}</p>
+                              <p className="text-[10px] text-zinc-400 mt-2">{new Date(n.created_at).toLocaleString()}</p>
+                           </div>
+                        </div>
+                        <button onClick={() => handleDeleteNotif(n.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                           <Trash2 size={18} />
+                        </button>
+                     </div>
+                  ))}
+                  {notifications.length === 0 && <EmptyState msg="No active notifications." />}
+               </div>
+            </div>
+         )}
+         {/* TAB 6: NOTIFICATIONS */}
+         {activeTab === 'notifications' && (
+            <div className="grid lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
+               {/* FORM */}
+               <div className="lg:col-span-1">
+                  <div className="bg-white p-8 rounded-[2rem] border border-zinc-100 shadow-lg sticky top-8">
+                     <h3 className="font-serif font-bold text-xl mb-6">New Update</h3>
+                     <form onSubmit={handlePostNotification} className="space-y-4">
+                        <div>
+                           <label className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Title</label>
+                           <input type="text" required value={notifForm.title} onChange={e=>setNotifForm({...notifForm, title: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-[#d4af37]/20 mt-1" placeholder="e.g. Summer Sale" />
+                        </div>
+                        <div>
+                           <label className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Type</label>
+                           <select value={notifForm.type} onChange={e=>setNotifForm({...notifForm, type: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-[#d4af37]/20 mt-1">
+                              <option value="offer">Special Offer</option>
+                              <option value="news">Announcement</option>
+                              <option value="alert">Alert</option>
+                           </select>
+                        </div>
+                        <div>
+                           <label className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Message</label>
+                           <textarea required rows={4} value={notifForm.message} onChange={e=>setNotifForm({...notifForm, message: e.target.value})} className="w-full bg-zinc-50 p-3 rounded-xl border-none focus:ring-2 focus:ring-[#d4af37]/20 mt-1" placeholder="Enter details..." />
+                        </div>
+                        <button disabled={isPosting} className="w-full bg-black text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#d4af37] hover:text-black transition-colors">
+                           {isPosting ? "Posting..." : <><Plus size={18} /> Post Update</>} 
+                        </button>
+                     </form>
+                  </div>
+               </div>
+
+               {/* LIST */}
+               <div className="lg:col-span-2 space-y-4">
+                  {notifications.map((n: any) => (
+                     <div key={n.id} className="bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm flex justify-between items-start group hover:shadow-md transition-all">
+                        <div className="flex gap-4">
+                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${n.type==='offer' ? 'bg-[#d4af37]/10 text-[#d4af37]' : n.type==='alert' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
+                              <Bell size={20} />
+                           </div>
+                           <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                 <h4 className="font-bold text-lg">{n.title}</h4>
+                                 <span className="text-[10px] bg-zinc-100 px-2 py-0.5 rounded uppercase font-bold text-zinc-500">{n.type}</span>
+                              </div>
+                              <p className="text-zinc-600 text-sm">{n.message}</p>
+                              <p className="text-[10px] text-zinc-400 mt-2">{new Date(n.created_at).toLocaleString()}</p>
+                           </div>
+                        </div>
+                        <button onClick={() => handleDeleteNotif(n.id)} className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                           <Trash2 size={18} />
+                        </button>
+                     </div>
+                  ))}
+                  {notifications.length === 0 && <EmptyState msg="No active notifications." />}
+               </div>
+            </div>
          )}
       </main>
     </div>
