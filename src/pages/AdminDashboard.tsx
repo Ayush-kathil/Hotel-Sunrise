@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 import { 
   LayoutGrid, Package, Calendar, Megaphone,
   Utensils, Mail, UserCheck, Brush, PartyPopper,
-  LogOut, Moon, Sun, BedDouble
+  LogOut, Moon, Sun, BedDouble, Lock, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,6 +23,13 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [darkMode, setDarkMode] = useState(true);
   const [loading, setLoading] = useState(true);
+  
+  // AUTH STATE
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('sunrise_admin_auth') === 'true';
+  });
+  const [passcodeInput, setPasscodeInput] = useState('');
+  const [authError, setAuthError] = useState(false);
 
   // DATA STATES
   const [stats, setStats] = useState({ newBookings: 0, availableRooms: 0, reservations: 0, checkIns: 0, checkOuts: 0 });
@@ -32,37 +39,34 @@ const AdminDashboard = () => {
   const [dining, setDining] = useState<DiningReservation[]>([]);
   const [events, setEvents] = useState<EventInquiry[]>([]);
   const [messages, setMessages] = useState<ContactMessage[]>([]);
-  // Housekeeping data fetched but not displayed as we use static staff for demo
-  const [, setHousekeeping] = useState<HousekeepingTask[]>([]);
-  const [guests, setGuests] = useState<Guest[]>([]);
+  const [housekeeping, setHousekeeping] = useState<HousekeepingTask[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]); // External guests
 
   // FETCH DATA
   const fetchData = async () => {
     try {
-      setLoading(true);
+      if (!isAuthenticated) return;
+      // setLoading(true); // Don't full reload on updates, handled by initial load
       
       const { data: rData } = await supabase.from('rooms').select('*').order('room_number');
       const { data: bData } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
       const { data: pData } = await supabase.from('profiles').select('id, full_name, mobile_number');
-      
       const { data: nData } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
-      
-      // ... (other fetches)
       const { data: dData } = await supabase.from('dining_reservations').select('*').order('date', { ascending: true });
       const { data: eData } = await supabase.from('event_inquiries').select('*').order('created_at', { ascending: false });
       const { data: mData } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
-      const { data: hData } = await supabase.from('housekeeping').select('*');
-      
-      const { data: guestTableData } = await supabase.from('Guest').select('*');
-      const finalGuests = guestTableData || [];
+      const { data: hData } = await supabase.from('housekeeping').select('*').order('room_number');
+      const { data: gData } = await supabase.from('Guest').select('*'); // Ensure table name casing matches DB
 
       if (rData) {
         setRooms(rData as any);
         setStats(prev => ({ ...prev, availableRooms: rData.filter((r: any) => r.status === 'available').length }));
       }
+      
       if (bData) {
-        // Manual Join
+        // Manual Join for profiles
         const joinedBookings = bData.map((b: any) => {
+           // Try to find profile by user_id
            const profile = pData?.find((p: any) => p.id === b.user_id);
            return {
              ...b,
@@ -81,25 +85,76 @@ const AdminDashboard = () => {
           checkOuts: bData.filter((b: any) => new Date(b.check_out).toDateString() === today).length,
         }));
       }
+      
       if (nData) setNotifications(nData as any);
       if (dData) setDining(dData as any);
       if (eData) setEvents(eData as any);
       if (mData) setMessages(mData as any);
       if (hData) setHousekeeping(hData as any);
-      if (finalGuests) setGuests(finalGuests as any);
+      if (gData) setGuests(gData as any);
 
     } catch (err: any) {
       console.error('Data fetch error:', err);
+      toast.error('Failed to sync data');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  // INITIAL LOAD
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
 
-  // --- ACTIONS ---
+  // REALTIME SUBSCRIPTIONS
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const channel = supabase.channel('admin-dashboard-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public' },
+        (payload) => {
+          console.log('Realtime change received:', payload);
+          // For simplicity and accuracy effectively ensuring ALL data is fresh, we'll re-fetch.
+          // In a larger app, we'd update specific state arrays optimistically.
+          fetchData();
+          toast.info(`Update received from ${payload.table}`);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated]);
+
+  // AUTH HANDLER
+  const handleAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    const envPasscode = import.meta.env.VITE_ADMIN_PASSCODE;
+    
+    if (passcodeInput === envPasscode) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('sunrise_admin_auth', 'true');
+      setAuthError(false);
+      toast.success('Welcome back, Admin');
+    } else {
+      setAuthError(true);
+      toast.error('Access Denied');
+      setPasscodeInput('');
+    }
+  };
+
+  // ACTIONS
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    sessionStorage.removeItem('sunrise_admin_auth');
+    setIsAuthenticated(false);
     navigate('/');
   };
 
@@ -117,7 +172,6 @@ const AdminDashboard = () => {
     else {
       toast.success('Update pushed!');
       (e.target as HTMLFormElement).reset();
-      fetchData();
     }
   };
 
@@ -125,18 +179,59 @@ const AdminDashboard = () => {
     try {
       const { error } = await supabase.from('notifications').delete().eq('id', id);
       if (error) throw error;
-      setNotifications(prev => prev.filter(n => n.id !== id));
       toast.success('Removed');
+      // State filtered by realtime or generic fetch logic, but strictly filtering here for instant feedback
+      setNotifications(prev => prev.filter(n => n.id !== id));
     } catch(err: any) {
       toast.error('Delete failed', { description: err.message });
     }
   };
 
+  // --- RENDER: AUTH SCREEN ---
+  if (!isAuthenticated) {
+    return (
+      <div className={`flex items-center justify-center h-screen w-full font-sans ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100'}`}>
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20 blur-sm"></div>
+        
+        <div className={`relative z-10 p-8 rounded-3xl border backdrop-blur-xl shadow-2xl w-full max-w-md ${darkMode ? 'bg-black/40 border-white/10' : 'bg-white/40 border-white/50'}`}>
+           <div className="flex flex-col items-center mb-8">
+              <div className="w-16 h-16 rounded-2xl bg-[#6366F1] flex items-center justify-center text-white font-serif italic text-2xl shadow-[0_0_40px_-10px_#6366F1]">S</div>
+              <h1 className="mt-6 text-2xl font-bold tracking-wider">Admin Portal</h1>
+              <p className="opacity-50 text-sm">Sunrise Hotel & Resort</p>
+           </div>
+
+           <form onSubmit={handleAuth} className="space-y-4">
+              <div className="space-y-2">
+                 <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Passcode</label>
+                 <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50" size={16} />
+                    <input 
+                      type="password" 
+                      autoFocus
+                      value={passcodeInput}
+                      onChange={(e) => { setPasscodeInput(e.target.value); setAuthError(false); }}
+                      className={`w-full bg-black/20 border text-center font-mono text-lg tracking-[0.5em] rounded-xl py-4 px-10 outline-none transition-all ${authError ? 'border-red-500/50 text-red-500' : 'border-white/10 focus:border-[#6366F1]/50'}`}
+                      placeholder="••••••"
+                    />
+                 </div>
+                 {authError && <p className="text-center text-red-500 text-xs font-bold animate-pulse">Invalid Passcode</p>}
+              </div>
+
+              <button className="w-full bg-[#6366F1] hover:bg-[#5558DD] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#6366F1]/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                Access Dashboard
+              </button>
+           </form>
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDER: DASHBOARD ---
   return (
     <div className={`flex h-screen font-sans overflow-hidden ${darkMode ? 'bg-[#0D0D0D] text-white' : 'bg-gray-100 text-gray-900'}`}>
       
       {/* SIDEBAR */}
-      <aside className={`w-64 flex flex-col border-r shrink-0 ${darkMode ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}`}>
+      <aside className={`w-64 flex flex-col border-r shrink-0 z-20 ${darkMode ? 'bg-[#121212] border-white/5' : 'bg-white border-gray-200'}`}>
         <div className="p-6 border-b border-white/5">
           <h1 className="text-xl font-bold tracking-wider flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-[#6366F1] flex items-center justify-center text-white font-serif italic">S</span>
@@ -144,7 +239,7 @@ const AdminDashboard = () => {
           </h1>
         </div>
 
-        <nav className="flex-1 p-4 space-y-8 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-8 overflow-y-auto custom-scrollbar">
           {/* GROUP 1 */}
           <div>
             <p className="text-[10px] font-bold opacity-30 uppercase tracking-widest mb-3 px-3">Front Desk</p>
@@ -189,11 +284,12 @@ const AdminDashboard = () => {
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
         {/* HEADER */}
         <header className={`flex items-center justify-between px-8 py-4 border-b shrink-0 ${darkMode ? 'border-white/5' : 'bg-white border-gray-200'}`}>
           <h2 className="text-xl font-bold capitalize">{activeTab.replace('_', ' ')}</h2>
           <div className="flex items-center gap-4">
+             {loading && <span className="text-xs opacity-50 animate-pulse">Syncing...</span>}
              <div className="flex bg-black/20 ml-auto rounded-lg p-1">
                  <button onClick={() => setDarkMode(true)} className={`p-2 rounded-md ${darkMode ? 'bg-[#6366F1] text-white' : 'opacity-40'}`}><Moon size={16}/></button>
                  <button onClick={() => setDarkMode(false)} className={`p-2 rounded-md ${!darkMode ? 'bg-[#6366F1] text-white' : 'opacity-40'}`}><Sun size={16}/></button>
@@ -201,16 +297,20 @@ const AdminDashboard = () => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-6">
+        {/* SCROLLABLE AREA */}
+        <div className="flex-1 overflow-y-auto p-8 pb-32 space-y-8 scroll-smooth">
           
-          {loading && <div className="text-center py-20 opacity-50 animate-pulse">Syncing Database...</div>}
-
-          {!loading && (
+          {loading && rooms.length === 0 ? (
+             <div className="flex flex-col items-center justify-center py-20 opacity-50 animate-pulse gap-4">
+                 <div className="w-10 h-10 border-4 border-[#6366F1] border-t-transparent rounded-full animate-spin"/>
+                 <p>Connecting to Hotel Database...</p>
+             </div>
+          ) : (
             <>
               {/* === TAB: OVERVIEW === */}
               {activeTab === 'overview' && (
                   <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                        <StatCard icon={BedDouble} label="New Bookings" value={stats.newBookings} color="bg-[#6366F1]" />
                        <StatCard icon={Package} label="Available" value={stats.availableRooms} color="bg-[#22C55E]" />
                        <StatCard icon={Utensils} label="Dining Resv" value={dining.length} color="bg-[#F97316]" />
@@ -223,7 +323,7 @@ const AdminDashboard = () => {
                           <div key={res.id} className="flex justify-between items-center py-3 border-b border-white/5 last:border-0 hover:bg-white/5 px-2 rounded-lg transition-colors">
                              <div>
                                 <p className="font-bold">{res.profiles?.full_name || 'Guest'}</p>
-                                <p className="text-xs opacity-40">Room {res.room_number}</p>
+                                <p className="text-xs opacity-40">Room {res.room_number || 'N/A'}</p>
                              </div>
                              <span className="text-xs font-bold opacity-60">{new Date(res.check_in).toLocaleDateString()}</span>
                           </div>
@@ -242,7 +342,7 @@ const AdminDashboard = () => {
                            {reservations.map(r => (
                               <tr key={r.id} className="hover:opacity-80">
                                 <td className="p-4 font-bold">{r.profiles?.full_name || 'Unknown'}</td>
-                                <td className="p-4">{r.room_number}</td>
+                                <td className="p-4">{r.room_number || '-'}</td>
                                 <td className="p-4 opacity-60">{new Date(r.check_in).toLocaleDateString()} - {new Date(r.check_out).toLocaleDateString()}</td>
                                 <td className="p-4 opacity-60">₹{r.total_price?.toLocaleString()}</td>
                               </tr>
@@ -254,11 +354,11 @@ const AdminDashboard = () => {
 
               {/* === TAB: INVENTORY === */}
               {activeTab === 'inventory' && (
-                 <div className="grid grid-cols-6 gap-2">
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {rooms.map(r => (
-                       <div key={r.id} className={`p-4 rounded-lg border text-center ${r.status === 'available' ? 'border-green-500/20 text-green-500' : 'border-red-500/20 text-red-500'}`}>
-                          <h3 className="font-bold text-xl">{r.room_number}</h3>
-                          <p className="text-[10px] uppercase opacity-60">{r.status}</p>
+                       <div key={r.id} className={`p-4 rounded-xl border text-center transition-all hover:scale-105 ${r.status === 'available' ? 'border-green-500/20 text-green-500 bg-green-500/5' : r.status === 'occupied' ? 'border-blue-500/20 text-blue-500 bg-blue-500/5' : 'border-red-500/20 text-red-500 bg-red-500/5'}`}>
+                          <h3 className="font-bold text-2xl">{r.room_number}</h3>
+                          <p className="text-[10px] uppercase opacity-60 font-bold tracking-wider mt-1">{r.status}</p>
                        </div>
                     ))}
                  </div>
@@ -289,40 +389,55 @@ const AdminDashboard = () => {
               {/* === TAB: HOUSEKEEPING === */}
               {activeTab === 'housekeeping' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Task List */}
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
-                    <h3 className="font-bold text-lg mb-4">Staff on Duty</h3>
-                    <div className="space-y-4">
-                      {['Suresh', 'Pratham'].map((name) => (
-                         <div key={name} className={`flex items-center gap-4 p-4 rounded-xl border ${darkMode ? 'bg-[#252525] border-white/5' : 'bg-gray-50 border-gray-200'}`}>
-                            <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center font-bold">{name[0]}</div>
-                            <div>
-                               <p className="font-bold">{name}</p>
-                               <p className="text-xs opacity-50">Housekeeping Staff</p>
-                            </div>
-                            <span className="ml-auto px-3 py-1 bg-green-500/10 text-green-500 text-xs font-bold rounded-full">Active</span>
-                         </div>
-                      ))}
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                         <Brush size={18}/> Cleaning Tasks
+                    </h3>
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                       {housekeeping.map(task => (
+                          <div key={task.id} className={`flex items-center gap-4 p-4 rounded-xl border ${darkMode ? 'bg-[#252525] border-white/5' : 'bg-gray-50 border-gray-200'}`}>
+                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                task.status === 'clean' ? 'bg-green-500/20 text-green-500' :
+                                task.status === 'dirty' ? 'bg-red-500/20 text-red-500' :
+                                'bg-yellow-500/20 text-yellow-500'
+                             }`}>
+                                {task.room_number}
+                             </div>
+                             <div>
+                                <p className="font-bold">{task.assigned_to || 'Unassigned'}</p>
+                                <p className="text-xs opacity-50 uppercase tracking-wider">{task.status}</p>
+                             </div>
+                             <div className="ml-auto flex gap-2">
+                                <span className={`w-3 h-3 rounded-full ${
+                                    task.status === 'clean' ? 'bg-green-500' :
+                                    task.status === 'dirty' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
+                                }`}/>
+                             </div>
+                          </div>
+                       ))}
+                       {housekeeping.length === 0 && <p className="text-center opacity-30 italic py-10">All rooms are clean!</p>}
                     </div>
                   </div>
                   
+                  {/* Room Status Visualization */}
                   <div className={`p-6 rounded-2xl border ${darkMode ? 'bg-[#1A1A1A] border-white/5' : 'bg-white border-gray-200'}`}>
-                     <h3 className="font-bold text-lg mb-4">Room Status</h3>
+                     <h3 className="font-bold text-lg mb-4">Floor Plan Status</h3>
                      <div className="grid grid-cols-4 gap-2">
                         {rooms.map(r => {
                           const occupants = reservations.find(res => res.room_number === r.room_number && new Date(res.check_out) > new Date());
+                          // Determine housekeeping status from housekeeping table
+                          const hpStatus = housekeeping.find(h => h.room_number === r.room_number)?.status || 'clean';
+                          
                           return (
-                           <div key={r.id} className={`p-2 text-center rounded-lg border text-xs flex flex-col items-center justify-center h-20 ${
-                              r.status === 'available' ? 'border-green-500/20 bg-green-500/5 text-green-500' :
+                           <div key={r.id} className={`p-2 text-center rounded-lg border text-xs flex flex-col items-center justify-center h-20 transition-all ${
+                              hpStatus === 'dirty' ? 'border-red-500/50 bg-red-500/10 text-red-500' :
+                              hpStatus === 'cleaning' ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500' :
                               r.status === 'occupied' ? 'border-blue-500/20 bg-blue-500/5 text-blue-500' :
-                              'border-red-500/20 bg-red-500/5 text-red-500 font-bold'
+                              'border-green-500/20 bg-green-500/5 text-green-500'
                            }`}>
                               <span className="text-lg font-bold">{r.room_number}</span>
-                              <span className="text-[9px] opacity-70 mb-1">{r.status === 'maintenance' ? 'DIRTY' : r.status === 'occupied' ? 'OCCUPIED' : 'CLEAN'}</span>
-                              {r.status === 'occupied' && occupants && (
-                                <span className="text-[8px] opacity-50 block border-t border-blue-500/20 pt-1 w-full truncate">
-                                  Out: {new Date(occupants.check_out).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
-                                </span>
-                              )}
+                              <span className="text-[9px] opacity-70 mb-1 font-bold uppercase">{hpStatus === 'clean' ? r.status : hpStatus}</span>
                            </div>
                         )})}
                      </div>
