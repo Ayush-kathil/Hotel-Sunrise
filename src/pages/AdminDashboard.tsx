@@ -192,137 +192,227 @@ const AdminDashboard = () => {
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto p-8 space-y-6">
           
-          {/* Date Selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Today</span>
-            <ChevronRight size={14} className="text-white/40" />
-          </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-5 gap-4">
-            <StatCard icon={BedDouble} label="New booking" value={stats.newBookings} color="bg-[#6366F1]" />
-            <StatCard icon={Package} label="Available rooms" value={stats.availableRooms} color="bg-[#22C55E]" />
-            <StatCard icon={Calendar} label="Reservations" value={stats.reservations} color="bg-[#14B8A6]" />
-            <StatCard icon={ArrowUpRight} label="Check ins" value={stats.checkIns} color="bg-[#F97316]" />
-            <StatCard icon={ArrowDownRight} label="Check outs" value={stats.checkOuts} color="bg-[#3B82F6]" />
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-12 gap-6">
-            {/* Expenses Chart */}
-            <div className="col-span-4 bg-[#1A1A1A] rounded-2xl p-6 border border-white/5">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-lg">Expenses</h3>
-                <select className="bg-[#252525] text-sm px-3 py-1.5 rounded-lg border border-white/10 text-white/70">
-                  <option>Monthly</option>
-                  <option>Weekly</option>
-                </select>
+          {/* VIEW: OVERVIEW */}
+          {activeTab === 'overview' && (
+            <>
+              {/* Date Selector & Stats */}
+              <div className="flex items-center gap-2 mb-6">
+                <span className="text-sm font-medium">Today</span>
+                <ChevronRight size={14} className="text-white/40" />
               </div>
-              
-              {/* Donut Chart Placeholder */}
-              <div className="flex items-center gap-6">
-                <div className="w-32 h-32 rounded-full border-[12px] border-[#6366F1] relative">
-                  <div className="absolute inset-0 rounded-full border-[12px] border-transparent border-t-[#22C55E] border-r-[#22C55E] rotate-[100deg]" />
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#6366F1]" /> Utilities <span className="text-white/50 ml-auto">29.4%</span></div>
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#22C55E]" /> Inventory <span className="text-white/50 ml-auto">23.8%</span></div>
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#14B8A6]" /> Payroll <span className="text-white/50 ml-auto">18.8%</span></div>
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#F97316]" /> Insurance <span className="text-white/50 ml-auto">13.9%</span></div>
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#EF4444]" /> Bills <span className="text-white/50 ml-auto">9.0%</span></div>
-                </div>
-              </div>
-            </div>
 
-            {/* Reservation Analytics */}
-            <div className="col-span-8 bg-[#1A1A1A] rounded-2xl p-6 border border-white/5">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-lg">Reservation Analytics</h3>
-                <div className="flex gap-2 text-xs">
-                  {['Daily', 'Weekly', 'Monthly', 'Yearly'].map((period) => (
-                    <button key={period} className={`px-3 py-1.5 rounded-lg ${period === 'Yearly' ? 'bg-[#6366F1] text-white' : 'text-white/50 hover:text-white'}`}>
-                      {period}
-                    </button>
-                  ))}
-                </div>
+              <div className="grid grid-cols-5 gap-4 mb-6">
+                <StatCard icon={BedDouble} label="New booking" value={stats.newBookings} color="bg-[#6366F1]" />
+                <StatCard icon={Package} label="Available rooms" value={stats.availableRooms} color="bg-[#22C55E]" />
+                <StatCard icon={Calendar} label="Reservations" value={stats.reservations} color="bg-[#14B8A6]" />
+                <StatCard icon={ArrowUpRight} label="Check ins" value={stats.checkIns} color="bg-[#F97316]" />
+                <StatCard icon={ArrowDownRight} label="Check outs" value={stats.checkOuts} color="bg-[#3B82F6]" />
               </div>
-              
-              {/* Chart Placeholder */}
-              <div className="h-48 flex items-end gap-2 pt-8">
-                {[35, 45, 40, 60, 80, 70, 90, 75, 85, 65, 50, 55].map((h, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                    <div className="w-full bg-gradient-to-t from-[#6366F1]/20 to-[#6366F1] rounded-t" style={{ height: `${h}%` }} />
-                    <span className="text-[10px] text-white/30">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i]}</span>
+
+              {/* Charts Row */}
+              <div className="grid grid-cols-12 gap-6 mb-6">
+                <div className="col-span-4 bg-[#1A1A1A] rounded-2xl p-6 border border-white/5">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-lg">Expenses</h3>
+                    <select className="bg-[#252525] text-sm px-3 py-1.5 rounded-lg border border-white/10 text-white/70">
+                      <option>Monthly</option>
+                    </select>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Row */}
-          <div className="grid grid-cols-12 gap-6">
-            {/* Calendar */}
-            <div className="col-span-5 bg-[#1A1A1A] rounded-2xl p-6 border border-white/5">
-              <div className="flex items-center justify-between mb-6">
-                <button onClick={prevMonth} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                  <ChevronLeft size={18} />
-                </button>
-                <span className="font-bold">{monthName}</span>
-                <button onClick={nextMonth} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                  <div key={d} className="text-white/30 py-2">{d}</div>
-                ))}
-                {Array.from({ length: firstDayOfMonth }).map((_, i) => <div key={`e-${i}`} />)}
-                {Array.from({ length: daysInMonth }).map((_, i) => (
-                  <button
-                    key={i + 1}
-                    onClick={() => setSelectedDate(i + 1)}
-                    className={`py-2 rounded-full transition-colors ${
-                      selectedDate === i + 1 
-                        ? 'bg-[#6366F1] text-white' 
-                        : 'hover:bg-white/5 text-white/70'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Customer Reviews */}
-            <div className="col-span-7 bg-[#1A1A1A] rounded-2xl p-6 border border-white/5">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-lg">Customer reviews</h3>
-                <button className="text-sm text-[#6366F1]">view all &gt;</button>
-              </div>
-              
-              <div className="space-y-4">
-                {reservations.slice(0, 3).map((res, i) => (
-                  <div key={res.id || i} className="flex gap-4 p-4 bg-[#252525] rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-sm">{res.profiles?.full_name || 'Guest User'}</h4>
-                        <div className="flex gap-0.5">
-                          {[1,2,3,4,5].map(s => <Star key={s} size={12} className={s <= 4 ? 'text-yellow-400 fill-yellow-400' : 'text-white/20'} />)}
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-white/40 mb-2">Stayed on {new Date(res.check_in).toLocaleDateString()}</p>
-                      <p className="text-xs text-white/60 line-clamp-2">Great experience at the hotel. The room was clean and comfortable.</p>
+                  <div className="flex items-center gap-6">
+                    <div className="w-32 h-32 rounded-full border-[12px] border-[#6366F1] relative">
+                      <div className="absolute inset-0 rounded-full border-[12px] border-transparent border-t-[#22C55E] border-r-[#22C55E] rotate-[100deg]" />
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#6366F1]" /> Utilities <span className="text-white/50 ml-auto">29%</span></div>
+                      <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#22C55E]" /> Inventory <span className="text-white/50 ml-auto">24%</span></div>
                     </div>
                   </div>
-                ))}
-                {reservations.length === 0 && (
-                  <div className="text-center py-8 text-white/30">No reviews yet</div>
-                )}
+                </div>
+
+                <div className="col-span-8 bg-[#1A1A1A] rounded-2xl p-6 border border-white/5">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-lg">Reservation Analytics</h3>
+                  </div>
+                  <div className="h-48 flex items-end gap-2 pt-8">
+                     {[35, 45, 40, 60, 80, 70, 90, 75, 85, 65, 50, 55].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                        <div className="w-full bg-gradient-to-t from-[#6366F1]/20 to-[#6366F1] rounded-t" style={{ height: `${h}%` }} />
+                        <span className="text-[10px] text-white/30">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+
+              {/* Bottom Row */}
+              <div className="grid grid-cols-12 gap-6">
+                <div className="col-span-12 bg-[#1A1A1A] rounded-2xl p-6 border border-white/5">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-bold text-lg">Recent Bookings</h3>
+                  </div>
+                  <div className="space-y-4">
+                    {reservations.slice(0, 5).map((res) => (
+                      <div key={res.id} className="flex gap-4 p-4 bg-[#252525] rounded-xl items-center hover:bg-[#2a2a2a] transition-colors">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 shrink-0 flex items-center justify-center text-xs font-bold">{res.profiles?.full_name?.[0]}</div>
+                        <div className="flex-1 min-w-0 grid grid-cols-4 gap-4 items-center">
+                          <div>
+                            <h4 className="font-bold text-sm text-white">{res.profiles?.full_name || 'Guest User'}</h4>
+                            <p className="text-[10px] text-white/40">{res.mobile_number || 'No Phone'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-white/40 uppercase tracking-widest">Room</p>
+                            <p className="text-sm font-bold">{res.room_number || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-white/40 uppercase tracking-widest">Check In</p>
+                            <p className="text-sm font-bold">{new Date(res.check_in).toLocaleDateString()}</p>
+                          </div>
+                          <div className="text-right">
+                             <span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-bold">Paid</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* VIEW: GUESTS (BOOKINGS) */}
+          {activeTab === 'guests' && (
+             <div className="bg-[#1A1A1A] rounded-2xl border border-white/5 overflow-hidden">
+                <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                   <h2 className="text-xl font-bold">All Reservations</h2>
+                   <div className="flex gap-2">
+                      <button className="px-4 py-2 bg-[#6366F1] text-sm font-bold rounded-lg hover:bg-[#5254cf] transition-colors">Export CSV</button>
+                   </div>
+                </div>
+                <table className="w-full text-left text-sm">
+                   <thead className="text-white/40 uppercase text-[10px] tracking-widest bg-[#202020]">
+                      <tr>
+                         <th className="p-4 pl-6">Guest</th>
+                         <th className="p-4">Contact</th>
+                         <th className="p-4">Room</th>
+                         <th className="p-4">Check-in</th>
+                         <th className="p-4">Nights</th>
+                         <th className="p-4">Amount</th>
+                         <th className="p-4 text-right pr-6">Status</th>
+                      </tr>
+                   </thead>
+                   <tbody className="divide-y divide-white/5">
+                      {reservations.map(res => (
+                         <tr key={res.id} className="hover:bg-white/5 transition-colors">
+                            <td className="p-4 pl-6 font-bold">{res.profiles?.full_name || 'Guest'}</td>
+                            <td className="p-4 text-white/60">{res.mobile_number || '-'}</td>
+                            <td className="p-4"><span className="bg-white/10 px-2 py-1 rounded text-xs font-mono">{res.room_number}</span></td>
+                            <td className="p-4 text-white/60">{new Date(res.check_in).toLocaleDateString()}</td>
+                            <td className="p-4">{res.nights}</td>
+                            <td className="p-4 font-mono">₹{res.total_price?.toLocaleString()}</td>
+                            <td className="p-4 text-right pr-6">
+                               <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs font-bold uppercase tracking-wider">Confirmed</span>
+                            </td>
+                         </tr>
+                      ))}
+                   </tbody>
+                </table>
+             </div>
+          )}
+
+          {/* VIEW: INVENTORY (ROOMS) */}
+          {activeTab === 'inventory' && (
+             <div className="bg-[#1A1A1A] rounded-2xl border border-white/5 overflow-hidden">
+                <div className="p-6 border-b border-white/5">
+                   <h2 className="text-xl font-bold">Room Inventory</h2>
+                </div>
+                <div className="grid grid-cols-4 lg:grid-cols-6 gap-4 p-6">
+                   {rooms.map(room => (
+                      <div key={room.id} className="bg-[#252525] p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center group hover:border-[#6366F1]/50 transition-colors">
+                         <span className={`text-xs font-bold uppercase tracking-widest mb-2 ${
+                            room.status === 'available' ? 'text-green-500' : 
+                            room.status === 'occupied' ? 'text-red-500' : 'text-blue-500'
+                         }`}>{room.status}</span>
+                         <h3 className="text-2xl font-bold mb-1">{room.room_number}</h3>
+                         <p className="text-[10px] text-white/40 uppercase truncate w-full">{room.category}</p>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          )}
+
+          {/* VIEW: REPORTS (NOTIFICATIONS) */}
+          {activeTab === 'reports' && (
+             <div className="grid lg:grid-cols-3 gap-8">
+               <div className="lg:col-span-1 bg-[#1A1A1A] p-6 rounded-2xl border border-white/5 h-fit">
+                 <h2 className="text-xl font-bold mb-4">Post Update</h2>
+                 <form onSubmit={async (e: any) => {
+                    e.preventDefault();
+                    const title = e.target.title.value;
+                    const message = e.target.message.value;
+                    const type = e.target.type.value;
+                    if(!title || !message) return;
+                    
+                    const { error } = await supabase.from('notifications').insert([{ title, message, type }]);
+                    if(!error) {
+                       toast.success('Notification posted');
+                       e.target.reset();
+                       // simplified refresh
+                       window.location.reload();
+                    } else {
+                       toast.error(error.message);
+                    }
+                 }} className="space-y-4">
+                    <div>
+                       <label className="text-xs font-bold text-white/50 uppercase">Title</label>
+                       <input name="title" className="w-full bg-[#252525] p-3 rounded-xl border border-white/10 text-white mt-1 outline-none focus:border-[#6366F1]" placeholder="e.g. Summer Sale" />
+                    </div>
+                    <div>
+                       <label className="text-xs font-bold text-white/50 uppercase">Type</label>
+                       <select name="type" className="w-full bg-[#252525] p-3 rounded-xl border border-white/10 text-white mt-1 outline-none">
+                          <option value="offer">Special Offer</option>
+                          <option value="news">News</option>
+                          <option value="alert">Alert</option>
+                       </select>
+                    </div>
+                    <div>
+                       <label className="text-xs font-bold text-white/50 uppercase">Message</label>
+                       <textarea name="message" rows={4} className="w-full bg-[#252525] p-3 rounded-xl border border-white/10 text-white mt-1 outline-none focus:border-[#6366F1]" placeholder="Enter announcement..."></textarea>
+                    </div>
+                    <button className="w-full bg-[#6366F1] text-white font-bold py-3 rounded-xl hover:bg-[#5254cf] transition-colors">Post Notification</button>
+                 </form>
+               </div>
+
+               <div className="lg:col-span-2 space-y-4">
+                 {notifications.map(n => (
+                    <div key={n.id} className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5 flex justify-between items-start group hover:border-white/10 transition-colors">
+                       <div className="flex gap-4">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                             n.type === 'offer' ? 'bg-orange-500/20 text-orange-500' :
+                             n.type === 'alert' ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'
+                          }`}>
+                            <Bell size={20} />
+                          </div>
+                          <div>
+                             <h4 className="font-bold text-lg mb-1">{n.title}</h4>
+                             <p className="text-white/60 text-sm mb-2">{n.message}</p>
+                             <span className="text-[10px] uppercase font-bold text-white/30">{new Date(n.created_at).toLocaleString()}</span>
+                          </div>
+                       </div>
+                       <button onClick={async () => {
+                          const { error } = await supabase.from('notifications').delete().eq('id', n.id);
+                          if(!error) {
+                             toast.success('Deleted');
+                             window.location.reload();
+                          }
+                       }} className="p-2 text-white/20 hover:text-red-500 transition-colors">
+                          <LogOut size={18} className="rotate-180" /> 
+                       </button>
+                    </div>
+                 ))}
+                 {notifications.length === 0 && <div className="text-center p-8 text-white/30 italic">No active notifications</div>}
+               </div>
+             </div>
+          )}
 
         </div>
       </main>
