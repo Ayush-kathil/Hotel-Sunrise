@@ -333,19 +333,26 @@ const AdminDashboard = () => {
               )}
 
               {activeTab === 'inventory' && (
-                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 pb-20"> {/* Add padding to grid itself */}
+                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 pb-20">
                     {rooms.map(r => {
                        const now = new Date();
                        const activeRes = reservations.find(res => {
-                           // Normalize check-in to start of day
+                           // 1. Normalize Room Numbers to String to prevent Type Mimecast (101 vs "101")
+                           if (String(res.room_number) !== String(r.room_number)) return false;
+
+                           // 2. Parse Dates safely
                            const checkIn = new Date(res.check_in);
-                           checkIn.setHours(0,0,0,0);
-                           
-                           // Normalize check-out to END of day (so it stays occupied on checkout day)
                            const checkOut = new Date(res.check_out);
-                           checkOut.setHours(23,59,59,999);
                            
-                           return res.room_number === r.room_number && now >= checkIn && now <= checkOut;
+                           // 3. Normalize to Day Boundaries to avoid Timezone/Time-of-day issues
+                           // Check-in starts at 00:00:00 local time
+                           checkIn.setHours(0,0,0,0);
+                           // Check-out ends at 23:59:59 local time (inclusive)
+                           checkOut.setHours(23,59,59,999);
+                           // Current time
+                           // We compare 'now' against the window. 
+                           // If today is equal to checkIn OR today is equal to checkOut OR today is between them.
+                           return now.getTime() >= checkIn.getTime() && now.getTime() <= checkOut.getTime();
                        });
 
                        const isOccupied = !!activeRes;
