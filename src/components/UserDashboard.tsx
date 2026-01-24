@@ -30,7 +30,7 @@ const Dashboard = () => {
       setEmail(user.email || '');
 
       // Get profile data from database
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)

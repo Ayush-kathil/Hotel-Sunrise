@@ -6,6 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const escapeHtml = (str: unknown): string => {
+  if (typeof str !== 'string') {
+    return String(str || '');
+  }
+  return str.replace(/[&<>"']/g, function(m) {
+    switch (m) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#039;';
+      default: return m;
+    }
+  });
+};
+
 serve(async (req: Request) => {
   // Handle Browser Security (CORS)
   if (req.method === 'OPTIONS') {
@@ -14,7 +30,13 @@ serve(async (req: Request) => {
 
   try {
     // 1. Get Data from React
-    const { email, name, room_name, room_number, dates, price, booking_id } = await req.json();
+    const body = await req.json();
+    const { email, dates, price } = body;
+    // Sanitize user inputs
+    const name = escapeHtml(body.name);
+    const room_name = escapeHtml(body.room_name);
+    const room_number = escapeHtml(body.room_number); // room_number can be string or int found in logic, safe to escape if string
+    const booking_id = escapeHtml(body.booking_id);
 
     // 2. Setup Gmail Transporter (Using Secrets)
     const transporter = nodemailer.createTransport({

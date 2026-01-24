@@ -4,13 +4,38 @@
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
             http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-<!-- created with Free Online Sitemap Generator www.xml-sitemaps.com -->
-
 
 <url>
   <loc>https://welcomesunrise.vercel.app/</loc>
-  <lastmod>2026-01-19T06:47:37+00:00</lastmod>
+  <lastmod>2026-01-24T00:00:00+00:00</lastmod>
 </url>
-
+<url>
+  <loc>https://welcomesunrise.vercel.app/rooms</loc>
+  <lastmod>2026-01-24T00:00:00+00:00</lastmod>
+</url>
+<url>
+  <loc>https://welcomesunrise.vercel.app/dining</loc>
+  <lastmod>2026-01-24T00:00:00+00:00</lastmod>
+</url>
+<url>
+  <loc>https://welcomesunrise.vercel.app/events</loc>
+  <lastmod>2026-01-24T00:00:00+00:00</lastmod>
+</url>
+<url>
+  <loc>https://welcomesunrise.vercel.app/contact</loc>
+  <lastmod>2026-01-24T00:00:00+00:00</lastmod>
+</url>
+<url>
+  <loc>https://welcomesunrise.vercel.app/booking</loc>
+  <lastmod>2026-01-24T00:00:00+00:00</lastmod>
+</url>
+<url>
+  <loc>https://welcomesunrise.vercel.app/login</loc>
+  <lastmod>2026-01-24T00:00:00+00:00</lastmod>
+</url>
+<url>
+  <loc>https://welcomesunrise.vercel.app/terms</loc>
+  <lastmod>2026-01-24T00:00:00+00:00</lastmod>
+</url>
 
 </urlset>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Lock, FileText, CheckCircle } from 'lucide-react';
+import { Shield, FileText, CheckCircle } from 'lucide-react';
 
 const Section = ({ title, children, delay }: { title: string, children: React.ReactNode, delay: number }) => (
   <motion.div 

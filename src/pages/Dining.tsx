@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, useMotionValue, AnimatePresence } from 'framer-motion';
-import { Utensils, ChefHat, ArrowDown, X, Mail, User, Calendar, Clock, Users, Wine, Coffee } from 'lucide-react';
+import { Utensils, ChefHat, ArrowDown, Wine, Coffee, Calendar } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { toast } from 'sonner';
 

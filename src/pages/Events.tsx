@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence, useSpring } from 'framer-motion';
+import React, { useState, useRef } from 'react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Users, CheckCircle, Calendar, X, Sparkles, MapPin } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { toast } from 'sonner';
@@ -44,12 +44,9 @@ const Events = () => {
   const containerRef = useRef(null);
 
   // Smooth scroll progress for the whole page
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"]
-  });
 
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+
+
 
   return (
     <div ref={containerRef} className="bg-[#fcfbf9] min-h-screen font-sans text-zinc-900 selection:bg-[#d4af37] selection:text-white">

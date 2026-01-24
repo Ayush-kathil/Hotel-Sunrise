@@ -6,13 +6,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const escapeHtml = (str: unknown): string => {
+  if (typeof str !== 'string') {
+    return String(str || '');
+  }
+  return str.replace(/[&<>"']/g, function(m) {
+    switch (m) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#039;';
+      default: return m;
+    }
+  });
+};
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { email, name, booking_id, room_name, refund_amount } = await req.json();
+    const body = await req.json();
+    const { email, refund_amount } = body;
+    // Sanitize inputs
+    const name = escapeHtml(body.name);
+    const booking_id = escapeHtml(body.booking_id);
+    const room_name = escapeHtml(body.room_name);
 
     // 1. Setup Transporter
     const transporter = nodemailer.createTransport({
@@ -25,7 +46,7 @@ serve(async (req: Request) => {
 
     // 1.5 Verify Connection
     await new Promise((resolve, reject) => {
-        transporter.verify(function (error: any, success: any) {
+        transporter.verify(function (error: Error | null, success: unknown) {
             if (error) {
                 console.error("SMTP Connection Error:", error);
                 reject(error);

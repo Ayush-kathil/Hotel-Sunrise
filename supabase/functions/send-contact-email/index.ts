@@ -1,16 +1,37 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import nodemailer from "npm:nodemailer@6.9.1";
+import { serve } from "std/http/server.ts";
+import nodemailer from "nodemailer";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const escapeHtml = (str: unknown): string => {
+  if (typeof str !== 'string') {
+    return String(str || '');
+  }
+  return str.replace(/[&<>"']/g, function(m) {
+    switch (m) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '"': return '&quot;';
+      case "'": return '&#039;';
+      default: return m;
+    }
+  });
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { name, email, subject, message } = await req.json();
+    const body = await req.json();
+    const { email } = body;
+    // Sanitize inputs
+    const name = escapeHtml(body.name);
+    const subject = escapeHtml(body.subject);
+    const message = escapeHtml(body.message);
     
     // Get Admin Email from Secrets (reuse your existing ones)
     const adminEmail = Deno.env.get('SMTP_EMAIL');
@@ -44,6 +65,6 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: (error as Error).message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
