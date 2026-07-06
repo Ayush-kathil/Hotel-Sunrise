@@ -4,7 +4,7 @@
     <a href="https://github.com/Ayush-kathil/Hotel-Sunrise">HOTEL SUNRISE</a>
   </h1>
   <p>
-    <b>Enterprise Hospitality Management & Reservation Platform</b>
+    <b>Enterprise Hotel Management & Reservation Platform</b>
   </p>
 </div>
 
