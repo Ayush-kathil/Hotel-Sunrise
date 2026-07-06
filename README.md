@@ -1,4 +1,14 @@
-# Hotel Sunrise Web Application
+<div align="center">
+  <img src="public/logo.png" alt="Hotel Sunrise Logo" width="120" height="120" onerror="this.style.display='none'" />
+  <h1>
+    <a href="https://github.com/Ayush-kathil/Hotel-Sunrise">HOTEL SUNRISE</a>
+  </h1>
+  <p>
+    <b>Enterprise Hospitality Management & Reservation Platform</b>
+  </p>
+</div>
+
+<br />
 
 This repository contains the source code for the Hotel Sunrise web platform. This document outlines the system architecture, development setup, and technical specifications of the project.
 
