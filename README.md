@@ -1,78 +1,64 @@
-# 🏨 Hotel Sunrise - Premium Hospitality Platform
+# Hotel Sunrise
 
-A luxury hotel booking platform featuring a "Royals" admin interface,
-physics-based "Antigravity" animations, and a seamless mobile-first experience.
+Welcome to the Hotel Sunrise project repository. This is a full-stack web application built for managing hotel bookings, showcasing room details, and providing an administrative interface for hotel staff.
 
-## ✨ Key Features
+## About the Project
 
-### 🌍 Application (Client Side)
+We built this project to handle everything a modern hotel needs. Guests can browse rooms, check availability, book their stay, and contact the hotel. On the other side, staff members have access to an admin dashboard to manage these bookings, update room statuses, and track housekeeping tasks.
 
-- **Antigravity UI:** Elements float, scale, and react to scrolling physics.
-- **Signature Services:** Horizontal scroll carousel for mobile users.
-- **Smart Booking:** Real-time availability checks and price calculation.
-- **User Profiles:** Real-time notifications for offers and updates.
-- **Secure Authentication:** Guest, Admin, and Google Login support
+## Pages Overview
 
-### 👑 Admin Dashboard (Royal Villas)
+Here is a breakdown of all the pages included in this application:
 
-- **Premium Interface:** Dark sidebar with light content area theme.
-- **Room Management:** Visual grid of all rooms with status indicators
-  (Available/Occupied/Cleaning).
-- **Live Reservations:** Create and manage guest bookings.
-- **Housekeeping:** Track cleaning schedules and staff assignments.
-- **Notification Center:** Broadcast offers and alerts to all users.
+* **Home**: The main landing page. It introduces the hotel and highlights key features.
+* **Rooms**: Displays all available room types, pricing, and amenities.
+* **BookingPage**: Allows users to select dates, choose rooms, and finalize their reservations.
+* **Dining**: Showcases the hotel's restaurant and dining options.
+* **Events**: Details about hosting weddings, corporate events, and parties at the hotel.
+* **Contact**: A form for users to send inquiries and find the hotel's location.
+* **Login**: The authentication page for both guests and staff members.
+* **Profile**: A user-specific dashboard where guests can view their booking history.
+* **AdminDashboard**: The staff portal for managing rooms, viewing live reservations, and handling housekeeping schedules.
+* **Terms**: The terms and conditions page.
+* **NotFound**: A custom 404 error page for broken links.
 
-## 🛠️ Tech Stack
+## APIs Used
 
-- **Core:** React 18, TypeScript, Vite
-- **Styling:** Tailwind CSS (v3.4), Lucide Icons
-- **Animation:** Framer Motion (Scroll triggers, page transitions)
-- **Backend:** Supabase (PostgreSQL, Auth, Realtime)
+We integrated several third-party services to handle specific functionalities:
 
-## 🚀 Installation
+* **Supabase**: Used as our primary database (PostgreSQL) and authentication provider. It handles user logins and stores all application data.
+* **Gemini API**: We use this via Supabase Edge Functions to power the customer support chatbot on the website.
+* **Cloudflare Turnstile**: Integrated for bot protection and spam prevention on our public forms.
+* **EmailJS**: Used to securely send emails directly from the client side without needing a custom backend email server.
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/hotel-sunrise.git
-   cd hotel-sunrise
-   ```
+## How to Run This Project Locally
 
-2. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+Follow these steps to get a local copy up and running on your machine.
 
-3. **Setup Environment Variables** Create a `.env` file in the root directory:
-   ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-  
+### Prerequisites
 
-4. **Database Setup (Supabase)** Run the contents of **`schema_updates_v2.sql`**
-   in your Supabase SQL Editor. This will create:
-   - `bookings`
-   - `rooms`
-   - `housekeeping`
-   - `notifications`
-   - `profiles`
+Make sure you have Node.js installed on your computer.
 
-5. **Run the Project**
-   ```bash
-   npm run dev
-   ```
+### Installation Steps
 
-## 📂 Project Structure
+1. Clone the repository to your local machine:
+   `git clone https://github.com/Ayush-kathil/Hotel-Sunrise.git`
 
-- `src/pages/` - Screens (Home, Booking, Login, AdminDashboard)
-- `src/components/` - UI Components (Navbar, AdminRoute, Modals)
-- `src/supabaseClient.ts` - Database configuration
+2. Navigate into the project directory:
+   `cd Hotel-Sunrise`
 
-## 🔒 Security
+3. Install all required dependencies:
+   `npm install`
 
-- **RLS Policies:** All database tables are protected with Row Level Security.
-- **Admin Route:** Secured via both Role-Based Access Control (RBAC) and
-  Environment checks.
+4. Set up your environment variables. Create a file named `.env` in the root folder and add your keys:
+   `VITE_SUPABASE_URL=your_supabase_url_here`
+   `VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here`
 
----
+5. Start the development server:
+   `npm run dev`
 
-© 2026 Hotel Sunrise.
+6. Open your browser and go to `http://localhost:5173` to view the application.
+
+### Database Setup
+
+If you are setting up the Supabase project from scratch, you will need to create the necessary tables. Run the SQL commands found in `schema_updates_v2.sql` inside your Supabase SQL Editor to generate the tables for bookings, rooms, housekeeping, notifications, and profiles.
