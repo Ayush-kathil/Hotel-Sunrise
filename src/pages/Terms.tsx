@@ -52,8 +52,24 @@ const Terms = () => {
             <p>Quiet hours are observed from 10:00 PM to 7:00 AM to ensure a peaceful environment for all guests.</p>
           </Section>
 
-          <Section title="Privacy & Data" delay={0.4}>
-            <p>We respect your privacy. Your personal data is stored securely and is only used for booking and communication purposes. We do not sell data to third parties.</p>
+          <Section title="Privacy & Data Processors" delay={0.4}>
+            <p>We respect your privacy. Your personal data is stored securely using industry-standard infrastructure (Supabase) and is used for booking, authentication, and communication. We utilize third-party services, including Cloudflare for security and EmailJS for correspondence, to provide our services.</p>
+          </Section>
+
+          <Section title="AI Chatbot & Data Processing" delay={0.5}>
+            <p>Our customer support chatbot is powered by third-party Artificial Intelligence (Google Gemini API). By interacting with the chatbot, you acknowledge that your conversational inputs are processed by these external services. We are not legally bound or liable for any promises, pricing errors, or inaccurate information hallucinated by the AI.</p>
+          </Section>
+
+          <Section title="User Data Rights (GDPR & CCPA)" delay={0.6}>
+            <p>You have the right to request access to, modification, or permanent deletion of your personal data stored on our servers (The Right to be Forgotten). Please contact our support team to exercise these rights.</p>
+          </Section>
+
+          <Section title="Cookies & Tracking" delay={0.7}>
+            <p>This application utilizes essential cookies and local storage tokens exclusively for user authentication (Supabase Auth) and security verification (Cloudflare Turnstile). We do not use third-party tracking cookies for advertising purposes.</p>
+          </Section>
+
+          <Section title="Limitation of Liability" delay={0.8}>
+            <p>While we implement stringent, industry-standard cybersecurity measures to protect your data, Hotel Sunrise is not liable for data breaches, service interruptions, or damages caused by sophisticated cyberattacks or third-party vendor failures beyond our reasonable control.</p>
           </Section>
 
           <div className="bg-zinc-50 p-6 rounded-2xl flex items-start gap-4 mt-8">
