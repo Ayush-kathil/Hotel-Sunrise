@@ -11,12 +11,11 @@
 <br />
 
 This repository contains the source code for the Hotel Sunrise web platform. This document outlines the system architecture, development setup, and technical specifications of the project.
+<br>
 <a href="https://welcomesunrise.vercel.app/" target="_blank">
   <img src="https://github.com/user-attachments/assets/3f56989d-fbe9-48d3-9dc7-be4cf63e23cb" alt="Website Preview" width="200" height="200" style="object-fit: cover;">
 </a>
-
-
-
+<br>
 ## Project Analysis and Missing Component Rectification
 
 The previous documentation lacked technical depth required for enterprise-grade evaluation. It missed critical system context, security protocols, and operational guidelines. This updated documentation addresses 50 specific architectural and operational areas that were previously undocumented, categorizing them into core infrastructure, development workflows, and advanced implementation details.
